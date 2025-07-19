@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'constants/app_constants.dart';
+import 'screens/home_screen.dart';
+import 'screens/inventory_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() {
   runApp(const PantryReadyApp());
@@ -11,8 +15,42 @@ class PantryReadyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PantryReady',
-      theme: ThemeData(primarySwatch: Colors.green),
+      theme: ThemeData(
+        primarySwatch: Colors.green,
+        primaryColor: AppConstants.primaryColor,
+        scaffoldBackgroundColor: AppConstants.backgroundColor,
+        appBarTheme: AppBarTheme(
+          backgroundColor: AppConstants.primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: AppConstants.cardColor,
+          elevation: 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppConstants.primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: AppConstants.backgroundColor,
+        ),
+      ),
       home: const MainScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -33,6 +71,12 @@ class _MainScreenState extends State<MainScreen> {
     SettingsScreen(),
   ];
 
+  static const List<String> _titles = <String>[
+    'PantryReady',
+    'Inventory',
+    'Settings',
+  ];
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -42,20 +86,43 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('PantryReady')),
-      body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
+      appBar: AppBar(
+        title: Text(_titles[_selectedIndex]),
+        centerTitle: true,
+        actions: [
+          if (_selectedIndex == 1) // Only show on inventory screen
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                // TODO: Navigate to add item screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Add item functionality coming soon!'),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+      body: IndexedStack(index: _selectedIndex, children: _widgetOptions),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Inventory'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.inventory),
+            label: 'Inventory',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green[700],
+        selectedItemColor: AppConstants.primaryColor,
+        unselectedItemColor: AppConstants.textSecondaryColor,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
       ),
     );
   }
