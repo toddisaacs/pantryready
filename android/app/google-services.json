@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "886188337372",
+    "project_id": "pantryreadyhub",
+    "storage_bucket": "pantryreadyhub.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:886188337372:android:8ecf5b5d27ef9f1b836c19",
+        "android_client_info": {
+          "package_name": "com.example.pantryready"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMZMhKWnHyGz3TTJZ_0psY5aJlNymJJ7Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
