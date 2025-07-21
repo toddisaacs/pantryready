@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'constants/app_constants.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:pantryready/firebase_options.dart';
+import 'package:pantryready/screens/add_item_screen.dart';
+import 'package:pantryready/screens/home_screen.dart';
+import 'package:pantryready/screens/inventory_screen.dart';
+import 'package:pantryready/screens/settings_screen.dart';
+import 'package:pantryready/models/pantry_item.dart';
+import 'package:pantryready/constants/app_constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,12 +70,9 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-
-  static const List<Widget> _widgetOptions = <Widget>[
-    HomeScreen(),
-    InventoryScreen(),
-    SettingsScreen(),
-  ];
+  final List<PantryItem> _pantryItems = List.from(
+    AppConstants.samplePantryItems,
+  );
 
   static const List<String> _titles = <String>[
     'PantryReady',
@@ -84,8 +86,22 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  void _addPantryItem(PantryItem? item) {
+    if (item != null) {
+      setState(() {
+        _pantryItems.add(item);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final List<Widget> _widgetOptions = <Widget>[
+      HomeScreen(onAddItem: _addPantryItem),
+      InventoryScreen(pantryItems: _pantryItems, onAddItem: _addPantryItem),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_selectedIndex]),
@@ -94,13 +110,14 @@ class _MainScreenState extends State<MainScreen> {
           if (_selectedIndex == 1) // Only show on inventory screen
             IconButton(
               icon: const Icon(Icons.add),
-              onPressed: () {
-                // TODO: Navigate to add item screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Add item functionality coming soon!'),
+              onPressed: () async {
+                final newItem = await Navigator.push<PantryItem>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddItemScreen(),
                   ),
                 );
+                _addPantryItem(newItem);
               },
             ),
         ],
@@ -130,7 +147,9 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final Function(PantryItem?) onAddItem;
+
+  const HomeScreen({super.key, required this.onAddItem});
 
   @override
   Widget build(BuildContext context) {
@@ -151,16 +170,14 @@ class SettingsScreen extends StatelessWidget {
 }
 
 class InventoryScreen extends StatelessWidget {
-  const InventoryScreen({super.key});
+  final List<PantryItem> pantryItems;
+  final Function(PantryItem?) onAddItem;
 
-  // Sample static pantry list
-  final List<PantryItem> pantryItems = const [
-    PantryItem(name: 'Canned Beans', quantity: 12, unit: 'cans'),
-    PantryItem(name: 'Rice', quantity: 5, unit: 'lbs'),
-    PantryItem(name: 'Bottled Water', quantity: 24, unit: 'bottles'),
-    PantryItem(name: 'Pasta', quantity: 8, unit: 'boxes'),
-    PantryItem(name: 'Peanut Butter', quantity: 3, unit: 'jars'),
-  ];
+  const InventoryScreen({
+    super.key,
+    required this.pantryItems,
+    required this.onAddItem,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -215,16 +232,4 @@ class InventoryItemDetailScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class PantryItem {
-  final String name;
-  final int quantity;
-  final String unit;
-
-  const PantryItem({
-    required this.name,
-    required this.quantity,
-    required this.unit,
-  });
 }

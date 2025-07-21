@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
-import '../constants/app_constants.dart';
-import '../models/pantry_item.dart';
-import 'inventory_item_detail_screen.dart';
+import 'package:pantryready/constants/app_constants.dart';
+import 'package:pantryready/models/pantry_item.dart';
+import 'package:pantryready/screens/add_item_screen.dart';
+import 'package:pantryready/screens/inventory_item_detail_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({super.key});
+  final List<PantryItem> pantryItems;
+  final Function(PantryItem?) onAddItem;
+
+  const InventoryScreen({
+    super.key,
+    required this.pantryItems,
+    required this.onAddItem,
+  });
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
@@ -16,7 +24,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   String? _selectedCategory;
 
   List<PantryItem> get _filteredItems {
-    List<PantryItem> items = AppConstants.samplePantryItems;
+    List<PantryItem> items = widget.pantryItems;
 
     if (_searchQuery.isNotEmpty) {
       items =
@@ -63,13 +71,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Navigate to add item screen
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Add item functionality coming soon!'),
-            ),
+        onPressed: () async {
+          final newItem = await Navigator.push<PantryItem>(
+            context,
+            MaterialPageRoute(builder: (context) => const AddItemScreen()),
           );
+          widget.onAddItem(newItem);
         },
         backgroundColor: AppConstants.primaryColor,
         child: const Icon(Icons.add, color: Colors.white),

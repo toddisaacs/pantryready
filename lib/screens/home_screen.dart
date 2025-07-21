@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import '../constants/app_constants.dart';
-import '../models/pantry_item.dart';
+import 'package:pantryready/constants/app_constants.dart';
+import 'package:pantryready/models/pantry_item.dart';
+import 'package:pantryready/screens/add_item_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final Function(PantryItem?) onAddItem;
+
+  const HomeScreen({super.key, required this.onAddItem});
 
   static const Widget _spacer = SizedBox(height: 24);
 
@@ -212,13 +215,14 @@ class HomeScreen extends StatelessWidget {
                 'Add Item',
                 Icons.add,
                 AppConstants.primaryColor,
-                () {
-                  // TODO: Navigate to add item screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Add item functionality coming soon!'),
+                () async {
+                  final newItem = await Navigator.push<PantryItem>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddItemScreen(),
                     ),
                   );
+                  onAddItem(newItem);
                 },
               ),
             ),

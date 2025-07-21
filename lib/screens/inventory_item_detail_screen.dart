@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../constants/app_constants.dart';
-import '../models/pantry_item.dart';
+import 'package:pantryready/constants/app_constants.dart';
+import 'package:pantryready/models/pantry_item.dart';
 
 class InventoryItemDetailScreen extends StatelessWidget {
   final PantryItem item;
