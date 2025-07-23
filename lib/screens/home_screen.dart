@@ -188,7 +188,7 @@ class HomeScreen extends StatelessWidget {
         ),
         subtitle: Text('${item.quantity} ${item.unit}'),
         trailing: Text(
-          item.category ?? 'No Category',
+          item.category,
           style: TextStyle(
             fontSize: 12,
             color: AppConstants.textSecondaryColor,

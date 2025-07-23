@@ -36,10 +36,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     item.name.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ) ||
-                    (item.category?.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
-                        ) ??
-                        false),
+                    item.category.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ),
               )
               .toList();
     }
@@ -178,8 +177,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget _buildInventoryList() {
     // Sort _filteredItems by category and name
     final sortedItems = List<PantryItem>.from(_filteredItems)..sort((a, b) {
-      final catComp = (a.category ?? '').toLowerCase().compareTo(
-        (b.category ?? '').toLowerCase(),
+      final catComp = a.category.toLowerCase().compareTo(
+        b.category.toLowerCase(),
       );
       if (catComp != 0) return catComp;
       return a.name.toLowerCase().compareTo(b.name.toLowerCase());
@@ -188,7 +187,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     // Group items by category
     final Map<String, List<PantryItem>> grouped = {};
     for (final item in sortedItems) {
-      final category = item.category ?? 'Uncategorized';
+      final category = item.category;
       grouped.putIfAbsent(category, () => []).add(item);
     }
 
@@ -275,9 +274,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('${item.quantity} ${item.unit}'),
-            if (item.category != null)
+            if (item.category.isNotEmpty)
               Text(
-                item.category!,
+                item.category,
                 style: TextStyle(
                   fontSize: 12,
                   color: AppConstants.textSecondaryColor,

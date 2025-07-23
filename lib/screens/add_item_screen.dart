@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
+import 'package:pantryready/screens/barcode_scanner_screen.dart';
 
 class AddItemScreen extends StatefulWidget {
-  const AddItemScreen({super.key});
+  final String? initialBarcode;
+
+  const AddItemScreen({super.key, this.initialBarcode});
 
   @override
   State<AddItemScreen> createState() => _AddItemScreenState();
@@ -11,18 +14,30 @@ class AddItemScreen extends StatefulWidget {
 
 class _AddItemScreenState extends State<AddItemScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-  String? _selectedUnit;
-  String? _selectedCategory;
+  final _nameController = TextEditingController();
+  final _quantityController = TextEditingController(text: '1');
+  final _notesController = TextEditingController();
+  final _barcodeController = TextEditingController();
+
+  String _selectedUnit = AppConstants.units.first;
+  String _selectedCategory = AppConstants.categories.first;
   DateTime? _selectedExpiryDate;
+
+  @override
+  void initState() {
+    super.initState();
+    // Set initial barcode if provided
+    if (widget.initialBarcode != null) {
+      _barcodeController.text = widget.initialBarcode!;
+    }
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _quantityController.dispose();
     _notesController.dispose();
+    _barcodeController.dispose();
     super.dispose();
   }
 
@@ -41,16 +56,36 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
+  Future<void> _scanBarcode() async {
+    final String? scannedBarcode = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+    );
+
+    if (scannedBarcode != null && scannedBarcode.isNotEmpty) {
+      setState(() {
+        _barcodeController.text = scannedBarcode;
+      });
+    }
+  }
+
   void _saveItem() {
     if (_formKey.currentState!.validate()) {
       final item = PantryItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
-        quantity: int.tryParse(_quantityController.text.trim()) ?? 1,
-        unit: _selectedUnit ?? '',
+        quantity: double.tryParse(_quantityController.text.trim()) ?? 1.0,
+        unit: _selectedUnit,
         category: _selectedCategory,
         expiryDate: _selectedExpiryDate,
-        notes: _notesController.text.trim(),
+        notes:
+            _notesController.text.trim().isEmpty
+                ? null
+                : _notesController.text.trim(),
+        barcode:
+            _barcodeController.text.trim().isEmpty
+                ? null
+                : _barcodeController.text.trim(),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -111,6 +146,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: _selectedUnit,
+                      decoration: const InputDecoration(
+                        labelText: 'Unit',
+                        border: OutlineInputBorder(),
+                      ),
                       items:
                           AppConstants.units
                               .map(
@@ -120,17 +159,19 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                 ),
                               )
                               .toList(),
-                      onChanged:
-                          (value) => setState(() => _selectedUnit = value),
-                      decoration: const InputDecoration(
-                        labelText: 'Unit',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator:
-                          (value) =>
-                              value == null || value.isEmpty
-                                  ? 'Select unit'
-                                  : null,
+                      onChanged: (String? value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedUnit = value;
+                          });
+                        }
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a unit';
+                        }
+                        return null;
+                      },
                     ),
                   ),
                 ],
@@ -138,23 +179,32 @@ class _AddItemScreenState extends State<AddItemScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
-                items:
-                    AppConstants.categories
-                        .map(
-                          (cat) =>
-                              DropdownMenuItem(value: cat, child: Text(cat)),
-                        )
-                        .toList(),
-                onChanged: (value) => setState(() => _selectedCategory = value),
                 decoration: const InputDecoration(
                   labelText: 'Category',
                   border: OutlineInputBorder(),
                 ),
-                validator:
-                    (value) =>
-                        value == null || value.isEmpty
-                            ? 'Select category'
-                            : null,
+                items:
+                    AppConstants.categories
+                        .map(
+                          (category) => DropdownMenuItem(
+                            value: category,
+                            child: Text(category),
+                          ),
+                        )
+                        .toList(),
+                onChanged: (String? value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedCategory = value;
+                    });
+                  }
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a category';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               ListTile(
@@ -178,6 +228,29 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              // Barcode field
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _barcodeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Barcode (Optional)',
+                        border: OutlineInputBorder(),
+                        hintText: 'Scan or enter barcode',
+                        prefixIcon: Icon(Icons.qr_code),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    onPressed: _scanBarcode,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    tooltip: 'Scan Barcode',
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               SizedBox(

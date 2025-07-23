@@ -4,10 +4,11 @@ import 'package:pantryready/models/pantry_item.dart';
 class AppConstants {
   static const Color primaryColor = Colors.green;
   static const Color accentColor = Colors.blue;
-  static const Color backgroundColor = Color(0xFFF5F5F5);
+  static const Color backgroundColor = Color(0xFFF8F9FA);
   static const Color cardColor = Colors.white;
   static const Color textColor = Colors.black87;
-  static const Color textSecondaryColor = Colors.black54;
+  static const Color textSecondaryColor = Color(0xFF6C757D);
+  static const Color successColor = Color(0xFF28A745);
 
   static const List<String> categories = [
     'Canned Goods',

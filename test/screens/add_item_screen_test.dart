@@ -16,21 +16,26 @@ void main() {
       expect(find.text('Category'), findsOneWidget);
       expect(find.text('Expiry Date'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'Notes'), findsOneWidget);
+      expect(find.text('Barcode (Optional)'), findsOneWidget);
       expect(find.widgetWithText(ElevatedButton, 'Save Item'), findsOneWidget);
     });
 
     testWidgets('validates required fields', (WidgetTester tester) async {
       await tester.pumpWidget(const MaterialApp(home: AddItemScreen()));
 
+      // Clear the quantity field to test validation
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Quantity'),
+        '',
+      );
+
       // Try to save without filling required fields
       await tester.tap(find.text('Save Item'));
       await tester.pumpAndSettle();
 
-      // Verify validation messages
+      // Verify validation messages (name is empty, quantity is empty)
       expect(find.text('Enter a name'), findsOneWidget);
       expect(find.text('Enter quantity'), findsOneWidget);
-      expect(find.text('Select unit'), findsOneWidget);
-      expect(find.text('Select category'), findsOneWidget);
     });
 
     testWidgets('validates quantity is a positive number', (
@@ -65,14 +70,14 @@ void main() {
         '5',
       );
 
-      // Select unit
-      await tester.tap(find.text('Unit'));
+      // Select unit - tap dropdown button instead of text
+      await tester.tap(find.byType(DropdownButtonFormField<String>).at(0));
       await tester.pumpAndSettle();
       await tester.tap(find.text(AppConstants.units.first).last);
       await tester.pumpAndSettle();
 
-      // Select category
-      await tester.tap(find.text('Category'));
+      // Select category - tap dropdown button instead of text
+      await tester.tap(find.byType(DropdownButtonFormField<String>).at(1));
       await tester.pumpAndSettle();
       await tester.tap(find.text(AppConstants.categories.first).last);
       await tester.pumpAndSettle();

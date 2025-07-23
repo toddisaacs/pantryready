@@ -93,10 +93,10 @@ class InventoryItemDetailScreen extends StatelessWidget {
                       color: AppConstants.textSecondaryColor,
                     ),
                   ),
-                  if (item.category != null) ...[
+                  if (item.category.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      item.category!,
+                      item.category,
                       style: TextStyle(
                         fontSize: 14,
                         color: AppConstants.textSecondaryColor,
@@ -126,8 +126,8 @@ class InventoryItemDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _buildDetailRow('Quantity', '${item.quantity} ${item.unit}'),
-            if (item.category != null)
-              _buildDetailRow('Category', item.category!),
+            if (item.category.isNotEmpty)
+              _buildDetailRow('Category', item.category),
             if (item.expiryDate != null)
               _buildDetailRow(
                 'Expiry Date',
