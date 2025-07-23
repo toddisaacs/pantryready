@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
+import 'package:pantryready/screens/edit_item_screen.dart';
 
 class InventoryItemDetailScreen extends StatelessWidget {
   final PantryItem item;
@@ -25,7 +26,7 @@ class InventoryItemDetailScreen extends StatelessWidget {
           if (onEdit != null)
             IconButton(
               icon: const Icon(Icons.edit),
-              onPressed: () => onEdit!(item),
+              onPressed: () => _handleEdit(context),
               tooltip: 'Edit Item',
             ),
           if (onDelete != null)
@@ -279,6 +280,18 @@ class InventoryItemDetailScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _handleEdit(BuildContext context) async {
+    final PantryItem? updatedItem = await Navigator.of(
+      context,
+    ).push<PantryItem>(
+      MaterialPageRoute(builder: (context) => EditItemScreen(item: item)),
+    );
+
+    if (updatedItem != null && onEdit != null) {
+      onEdit!(updatedItem);
+    }
   }
 
   Color _getCategoryColor(String? category) {

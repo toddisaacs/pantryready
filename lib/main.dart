@@ -7,6 +7,9 @@ import 'package:pantryready/screens/barcode_scanner_screen.dart';
 import 'package:pantryready/screens/edit_item_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/constants/app_constants.dart';
+import 'package:pantryready/services/product_api_service.dart';
+import 'package:pantryready/services/openfoodfacts_service.dart';
+import 'package:pantryready/services/mock_product_api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,76 +17,56 @@ void main() async {
   runApp(const PantryReadyApp());
 }
 
-class PantryReadyApp extends StatelessWidget {
+class PantryReadyApp extends StatefulWidget {
   const PantryReadyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PantryReady',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        primaryColor: AppConstants.primaryColor,
-        scaffoldBackgroundColor: AppConstants.backgroundColor,
-        appBarTheme: AppBarTheme(
-          backgroundColor: AppConstants.primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          color: AppConstants.cardColor,
-          elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppConstants.primaryColor,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: AppConstants.backgroundColor,
-        ),
-      ),
-      home: const MainScreen(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
+  State<PantryReadyApp> createState() => _PantryReadyAppState();
 }
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class _PantryReadyAppState extends State<PantryReadyApp> {
+  int _selectedIndex = 0;
+  final List<PantryItem> _pantryItems = [];
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
+  // Product API service - can be switched between implementations
+  late ProductApiService _productApiService;
+  bool _useOpenFoodFacts = true; // Toggle for testing
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
-}
+  void initState() {
+    super.initState();
+    _initializeApiService();
+    _loadSampleData();
+  }
 
-class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
-  final List<PantryItem> _pantryItems = List.from(
-    AppConstants.samplePantryItems,
-  );
+  void _initializeApiService() {
+    if (_useOpenFoodFacts) {
+      _productApiService = OpenFoodFactsService();
+    } else {
+      _productApiService = MockProductApiService();
+    }
+  }
 
-  static const List<String> _titles = <String>[
-    'PantryReady',
-    'Inventory',
-    'Settings',
-  ];
-
-  void _onItemTapped(int index) {
+  // Method to switch API service (useful for testing)
+  void _switchApiService() {
     setState(() {
-      _selectedIndex = index;
+      _useOpenFoodFacts = !_useOpenFoodFacts;
+      _initializeApiService();
     });
+
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text('Switched to ${_productApiService.serviceName}'),
+        backgroundColor: AppConstants.successColor,
+      ),
+    );
+  }
+
+  void _loadSampleData() {
+    // Load sample data from AppConstants
+    _pantryItems.addAll(AppConstants.samplePantryItems);
   }
 
   void _addPantryItem(PantryItem? item) {
@@ -100,75 +83,330 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  // Method to edit an existing pantry item
-  void _editPantryItem(PantryItem item) async {
+  // Method to edit an existing pantry item (direct navigation)
+  void _editPantryItem(PantryItem item, BuildContext scaffoldContext) async {
     final PantryItem? updatedItem = await Navigator.push<PantryItem>(
-      context,
+      scaffoldContext,
       MaterialPageRoute(builder: (context) => EditItemScreen(item: item)),
     );
 
     if (updatedItem != null) {
-      setState(() {
-        final index = _pantryItems.indexWhere((i) => i.id == item.id);
-        if (index != -1) {
-          _pantryItems[index] = updatedItem;
-        }
-      });
+      _updatePantryItem(updatedItem);
+    }
+  }
 
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Updated ${updatedItem.name}'),
-            backgroundColor: AppConstants.successColor,
-          ),
-        );
+  // Method to handle already updated pantry item (from detail screen)
+  void _handleUpdatedItem(PantryItem updatedItem) {
+    _updatePantryItem(updatedItem);
+  }
+
+  // Common method to update pantry item in the list
+  void _updatePantryItem(PantryItem updatedItem) {
+    setState(() {
+      final index = _pantryItems.indexWhere((i) => i.id == updatedItem.id);
+      if (index != -1) {
+        _pantryItems[index] = updatedItem;
+      }
+    });
+
+    // Show success message
+    if (mounted) {
+      _scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Updated ${updatedItem.name}'),
+          backgroundColor: AppConstants.successColor,
+        ),
+      );
+    }
+  }
+
+  // Enhanced method to handle barcode scanning with API integration
+  void _handleBarcodeScanning(BuildContext scaffoldContext) async {
+    final String? scannedBarcode = await Navigator.push<String>(
+      scaffoldContext,
+      MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+    );
+
+    if (scannedBarcode != null && scannedBarcode.isNotEmpty && mounted) {
+      // Show loading indicator
+      if (!mounted) return;
+      showDialog(
+        context: scaffoldContext,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        // Look up product information using the API
+        final ProductLookupResult result = await _productApiService
+            .lookupProduct(scannedBarcode);
+
+        if (mounted) {
+          Navigator.of(scaffoldContext).pop(); // Dismiss loading dialog
+
+          if (result.found) {
+            await _handleApiProductResult(
+              result,
+              scannedBarcode,
+              scaffoldContext,
+            );
+          } else if (result.errorMessage != null) {
+            // Show error and fall back to manual entry
+            if (mounted) {
+              await _showApiErrorDialog(
+                result.errorMessage!,
+                scannedBarcode,
+                scaffoldContext,
+              );
+            }
+          } else {
+            // Product not found, proceed with manual entry
+            if (mounted) {
+              await _handleProductNotFound(scannedBarcode, scaffoldContext);
+            }
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(scaffoldContext).pop(); // Dismiss loading dialog
+          if (mounted) {
+            await _showApiErrorDialog(
+              'Unexpected error: ${e.toString()}',
+              scannedBarcode,
+              scaffoldContext,
+            );
+          }
+        }
       }
     }
   }
 
-  // Method to handle barcode scanning
-  Future<void> _scanBarcode() async {
-    final String? scannedBarcode = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+  // Handle successful API product lookup
+  Future<void> _handleApiProductResult(
+    ProductLookupResult result,
+    String barcode,
+    BuildContext scaffoldContext,
+  ) async {
+    // Check if item already exists
+    final existingItem =
+        _pantryItems.where((item) => item.barcode == barcode).firstOrNull;
+
+    if (existingItem != null) {
+      _showQuantityUpdateDialog(existingItem, result.name!);
+    } else {
+      // Create new item from API data
+      final newItem = result.toPantryItem(barcode: barcode);
+      await _showApiProductDialog(newItem, result, scaffoldContext);
+    }
+  }
+
+  // Show dialog with API product information and option to add/customize
+  Future<void> _showApiProductDialog(
+    PantryItem suggestedItem,
+    ProductLookupResult result,
+    BuildContext scaffoldContext,
+  ) async {
+    if (!mounted) return;
+
+    final bool? shouldAdd = await showDialog<bool>(
+      context: scaffoldContext,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Product Found: ${result.name}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (result.brand != null)
+                    Text(
+                      'Brand: ${result.brand}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  if (result.category != null)
+                    Text('Category: ${result.category}'),
+                  if (result.ingredients != null) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Ingredients:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      result.ingredients!,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                  if (result.nutritionFacts != null &&
+                      result.nutritionFacts!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Nutrition (per 100g):',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ...result.nutritionFacts!.entries.map(
+                      (entry) => Text(
+                        '${_formatNutritionKey(entry.key)}: ${entry.value}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  const Text('Would you like to add this item to your pantry?'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Customize'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Add Item'),
+              ),
+            ],
+          ),
     );
 
-    if (scannedBarcode != null && scannedBarcode.isNotEmpty) {
-      // Check if item with this barcode already exists
-      final existingItem = _pantryItems.firstWhere(
-        (item) => item.barcode == scannedBarcode,
-        orElse:
-            () => PantryItem(
-              id: '',
-              name: '',
-              quantity: 0,
-              unit: '',
-              category: '',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            ),
+    if (shouldAdd == true && mounted) {
+      // Navigate to add item screen with pre-filled data
+      final PantryItem? newItem = await Navigator.push<PantryItem>(
+        scaffoldContext,
+        MaterialPageRoute(
+          builder:
+              (context) => AddItemScreen(
+                initialBarcode: suggestedItem.barcode,
+                suggestedItem: suggestedItem,
+              ),
+        ),
       );
 
-      if (existingItem.id.isNotEmpty) {
-        // Item exists, show dialog to update quantity
-        if (mounted) {
-          _showQuantityUpdateDialog(existingItem, scannedBarcode);
-        }
-      } else {
-        // Item doesn't exist, navigate to add item screen with barcode
-        if (mounted) {
-          final newItem = await Navigator.push<PantryItem>(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => AddItemScreen(initialBarcode: scannedBarcode),
-            ),
-          );
-          _addPantryItem(newItem);
-        }
+      if (newItem != null && mounted) {
+        _addPantryItem(newItem);
       }
     }
+  }
+
+  // Handle product not found in API
+  Future<void> _handleProductNotFound(
+    String barcode,
+    BuildContext scaffoldContext,
+  ) async {
+    if (!mounted) return;
+
+    final bool? shouldAdd = await showDialog<bool>(
+      context: scaffoldContext,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Product Not Found'),
+            content: Text(
+              'No product information found for barcode $barcode.\nWould you like to add it manually?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Add Manually'),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldAdd == true && mounted) {
+      final PantryItem? newItem = await Navigator.push<PantryItem>(
+        scaffoldContext,
+        MaterialPageRoute(
+          builder: (context) => AddItemScreen(initialBarcode: barcode),
+        ),
+      );
+
+      if (newItem != null && mounted) {
+        _addPantryItem(newItem);
+      }
+    }
+  }
+
+  // Show API error dialog with fallback option
+  Future<void> _showApiErrorDialog(
+    String error,
+    String barcode,
+    BuildContext scaffoldContext,
+  ) async {
+    if (!mounted) return;
+
+    final bool? shouldContinue = await showDialog<bool>(
+      context: scaffoldContext,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('API Error'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Error looking up product: $error'),
+                const SizedBox(height: 16),
+                const Text('Would you like to add the item manually instead?'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Add Manually'),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldContinue == true && mounted) {
+      final PantryItem? newItem = await Navigator.push<PantryItem>(
+        scaffoldContext,
+        MaterialPageRoute(
+          builder: (context) => AddItemScreen(initialBarcode: barcode),
+        ),
+      );
+
+      if (newItem != null && mounted) {
+        _addPantryItem(newItem);
+      }
+    }
+  }
+
+  // Format nutrition fact keys for display
+  String _formatNutritionKey(String key) {
+    return key
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   // Show dialog to update quantity for existing item
@@ -227,7 +465,7 @@ class _MainScreenState extends State<MainScreen> {
                   Navigator.of(context).pop();
 
                   // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  _scaffoldMessengerKey.currentState?.showSnackBar(
                     SnackBar(
                       content: Text(
                         'Added $additionalQuantity ${existingItem.unit} to ${existingItem.name}',
@@ -247,66 +485,113 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> widgetOptions = <Widget>[
-      HomeScreen(onAddItem: _addPantryItem),
-      InventoryScreen(
-        pantryItems: _pantryItems,
-        onAddItem: _addPantryItem,
-        onDeleteItem: _deletePantryItem,
-        onEditItem: _editPantryItem,
-      ),
-      const SettingsScreen(),
-    ];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_selectedIndex]),
-        centerTitle: true,
-        actions: [
-          if (_selectedIndex == 1) // Only show on inventory screen
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.qr_code_scanner),
-                  onPressed: _scanBarcode,
-                  tooltip: 'Scan Barcode',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () async {
-                    final newItem = await Navigator.push<PantryItem>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AddItemScreen(),
-                      ),
-                    );
-                    _addPantryItem(newItem);
-                  },
-                ),
-              ],
+    return MaterialApp(
+      title: 'PantryReady',
+      scaffoldMessengerKey: _scaffoldMessengerKey,
+      theme: ThemeData(
+        primarySwatch: Colors.green,
+        primaryColor: AppConstants.primaryColor,
+        scaffoldBackgroundColor: AppConstants.backgroundColor,
+        appBarTheme: AppBarTheme(
+          backgroundColor: AppConstants.primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: AppConstants.cardColor,
+          elevation: 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppConstants.primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
-        ],
-      ),
-      body: IndexedStack(index: _selectedIndex, children: widgetOptions),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory),
-            label: 'Inventory',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: AppConstants.primaryColor,
-        unselectedItemColor: AppConstants.textSecondaryColor,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
+          filled: true,
+          fillColor: AppConstants.backgroundColor,
+        ),
       ),
+      home: _buildMainScreen(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+
+  Widget _buildMainScreen() {
+    return Builder(
+      builder: (scaffoldContext) {
+        final List<Widget> widgetOptions = <Widget>[
+          HomeScreen(onAddItem: _addPantryItem),
+          InventoryScreen(
+            pantryItems: _pantryItems,
+            onAddItem: _addPantryItem,
+            onDeleteItem: _deletePantryItem,
+            onEditItem: (item) => _editPantryItem(item, scaffoldContext),
+            onItemUpdated: _handleUpdatedItem,
+          ),
+          const SettingsScreen(),
+        ];
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('PantryReady'),
+            backgroundColor: AppConstants.primaryColor,
+            foregroundColor: Colors.white,
+            actions: [
+              // API service toggle button (for testing)
+              Builder(
+                builder:
+                    (context) => IconButton(
+                      icon: Icon(
+                        _useOpenFoodFacts ? Icons.api : Icons.bug_report,
+                      ),
+                      onPressed: _switchApiService,
+                      tooltip: 'Switch API Service',
+                    ),
+              ),
+              // Barcode scanner button
+              Builder(
+                builder:
+                    (context) => IconButton(
+                      icon: const Icon(Icons.qr_code_scanner),
+                      onPressed: () => _handleBarcodeScanning(context),
+                      tooltip: 'Scan Barcode',
+                    ),
+              ),
+            ],
+          ),
+          body: IndexedStack(index: _selectedIndex, children: widgetOptions),
+          bottomNavigationBar: BottomNavigationBar(
+            items: const <BottomNavigationBarItem>[
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.inventory),
+                label: 'Inventory',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.settings),
+                label: 'Settings',
+              ),
+            ],
+            currentIndex: _selectedIndex,
+            selectedItemColor: AppConstants.primaryColor,
+            unselectedItemColor: AppConstants.textSecondaryColor,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            elevation: 8,
+          ),
+        );
+      },
     );
   }
 }

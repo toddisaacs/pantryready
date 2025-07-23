@@ -130,14 +130,12 @@ void main() {
     testWidgets(
       'InventoryItemDetailScreen shows edit button when onEdit is provided',
       (WidgetTester tester) async {
-        bool editCalled = false;
-
         await tester.pumpWidget(
           MaterialApp(
             home: InventoryItemDetailScreen(
               item: testItem,
               onEdit: (item) {
-                editCalled = true;
+                // Callback for when edit is completed
               },
             ),
           ),
@@ -147,12 +145,19 @@ void main() {
         expect(find.byIcon(Icons.edit), findsOneWidget);
         expect(find.byTooltip('Edit Item'), findsOneWidget);
 
-        // Tap edit button
+        // Tap edit button should navigate to EditItemScreen
         await tester.tap(find.byIcon(Icons.edit));
         await tester.pumpAndSettle();
 
-        // Verify callback was called
-        expect(editCalled, true);
+        // Verify we navigated to EditItemScreen
+        expect(find.text('Edit Item'), findsOneWidget); // EditItemScreen title
+        expect(
+          find.text('Update Item'),
+          findsOneWidget,
+        ); // EditItemScreen button
+
+        // The callback is only called when EditItemScreen returns with a result,
+        // which doesn't happen in this test since we don't simulate saving
       },
     );
 

@@ -5,8 +5,9 @@ import 'package:pantryready/screens/barcode_scanner_screen.dart';
 
 class AddItemScreen extends StatefulWidget {
   final String? initialBarcode;
+  final PantryItem? suggestedItem;
 
-  const AddItemScreen({super.key, this.initialBarcode});
+  const AddItemScreen({super.key, this.initialBarcode, this.suggestedItem});
 
   @override
   State<AddItemScreen> createState() => _AddItemScreenState();
@@ -15,7 +16,7 @@ class AddItemScreen extends StatefulWidget {
 class _AddItemScreenState extends State<AddItemScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _quantityController = TextEditingController(text: '1');
+  final _quantityController = TextEditingController();
   final _notesController = TextEditingController();
   final _barcodeController = TextEditingController();
 
@@ -26,9 +27,21 @@ class _AddItemScreenState extends State<AddItemScreen> {
   @override
   void initState() {
     super.initState();
-    // Set initial barcode if provided
+
+    // Pre-fill barcode if provided
     if (widget.initialBarcode != null) {
       _barcodeController.text = widget.initialBarcode!;
+    }
+
+    // Pre-fill fields from suggested item if provided
+    if (widget.suggestedItem != null) {
+      final item = widget.suggestedItem!;
+      _nameController.text = item.name;
+      _quantityController.text = item.quantity.toString();
+      _notesController.text = item.notes ?? '';
+      _selectedUnit = item.unit;
+      _selectedCategory = item.category;
+      _selectedExpiryDate = item.expiryDate;
     }
   }
 

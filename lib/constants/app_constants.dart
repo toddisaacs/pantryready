@@ -20,6 +20,7 @@ class AppConstants {
     'Dairy',
     'Produce',
     'Meat',
+    'Other',
   ];
 
   static const List<String> units = [

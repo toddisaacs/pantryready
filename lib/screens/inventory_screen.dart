@@ -9,6 +9,7 @@ class InventoryScreen extends StatefulWidget {
   final Function(PantryItem?) onAddItem;
   final Function(PantryItem) onDeleteItem;
   final Function(PantryItem) onEditItem;
+  final Function(PantryItem) onItemUpdated;
 
   const InventoryScreen({
     super.key,
@@ -16,6 +17,7 @@ class InventoryScreen extends StatefulWidget {
     required this.onAddItem,
     required this.onDeleteItem,
     required this.onEditItem,
+    required this.onItemUpdated,
   });
 
   @override
@@ -318,7 +320,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   (context) => InventoryItemDetailScreen(
                     item: item,
                     onDelete: widget.onDeleteItem,
-                    onEdit: widget.onEditItem,
+                    onEdit: widget.onItemUpdated,
                   ),
             ),
           );
