@@ -174,12 +174,65 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildInventoryList() {
+    // Sort _filteredItems by category and name
+    final sortedItems = List<PantryItem>.from(_filteredItems)..sort((a, b) {
+      final catComp = (a.category ?? '').toLowerCase().compareTo(
+        (b.category ?? '').toLowerCase(),
+      );
+      if (catComp != 0) return catComp;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+
+    // Group items by category
+    final Map<String, List<PantryItem>> grouped = {};
+    for (final item in sortedItems) {
+      final category = item.category ?? 'Uncategorized';
+      grouped.putIfAbsent(category, () => []).add(item);
+    }
+
+    final List<String> sortedCategories =
+        grouped.keys.toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    // Sort items within each category by name
+    for (final cat in sortedCategories) {
+      grouped[cat]!.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: _filteredItems.length,
+      itemCount: sortedCategories.fold<int>(
+        0,
+        (prev, cat) => prev + 1 + (grouped[cat]?.length ?? 0),
+      ),
       itemBuilder: (context, index) {
-        final item = _filteredItems[index];
-        return _buildInventoryItemTile(item);
+        int runningIndex = 0;
+        for (final category in sortedCategories) {
+          // Category header
+          if (index == runningIndex) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 8),
+              child: Text(
+                category,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            );
+          }
+          runningIndex++;
+          // Category items
+          final items = grouped[category]!;
+          if (index < runningIndex + items.length) {
+            final item = items[index - runningIndex];
+            return _buildInventoryItemTile(item);
+          }
+          runningIndex += items.length;
+        }
+        return const SizedBox.shrink();
       },
     );
   }

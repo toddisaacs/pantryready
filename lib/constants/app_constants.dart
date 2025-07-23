@@ -80,5 +80,14 @@ class AppConstants {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     ),
+    PantryItem(
+      id: '6',
+      name: 'Pinto Beans',
+      quantity: 2,
+      unit: 'lbs',
+      category: 'Grains',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),
   ];
 }
