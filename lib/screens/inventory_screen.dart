@@ -7,11 +7,13 @@ import 'package:pantryready/screens/inventory_item_detail_screen.dart';
 class InventoryScreen extends StatefulWidget {
   final List<PantryItem> pantryItems;
   final Function(PantryItem?) onAddItem;
+  final Function(PantryItem)? onDeleteItem;
 
   const InventoryScreen({
     super.key,
     required this.pantryItems,
     required this.onAddItem,
+    this.onDeleteItem,
   });
 
   @override
@@ -297,7 +299,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => InventoryItemDetailScreen(item: item),
+              builder:
+                  (context) => InventoryItemDetailScreen(
+                    item: item,
+                    onDelete: widget.onDeleteItem,
+                  ),
             ),
           );
         },

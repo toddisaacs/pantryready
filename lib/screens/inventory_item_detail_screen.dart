@@ -4,8 +4,13 @@ import 'package:pantryready/models/pantry_item.dart';
 
 class InventoryItemDetailScreen extends StatelessWidget {
   final PantryItem item;
+  final Function(PantryItem)? onDelete;
 
-  const InventoryItemDetailScreen({super.key, required this.item});
+  const InventoryItemDetailScreen({
+    super.key,
+    required this.item,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -253,13 +258,22 @@ class InventoryItemDetailScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
-                // TODO: Implement delete functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Delete functionality coming soon!'),
-                  ),
-                );
+                Navigator.of(context).pop(); // Close dialog
+                if (onDelete != null) {
+                  onDelete!(item);
+                  Navigator.of(context).pop(); // Close detail screen
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${item.name} deleted successfully'),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Delete functionality not available'),
+                    ),
+                  );
+                }
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Delete'),

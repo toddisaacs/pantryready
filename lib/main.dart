@@ -94,11 +94,21 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  void _deletePantryItem(PantryItem item) {
+    setState(() {
+      _pantryItems.removeWhere((pantryItem) => pantryItem.id == item.id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
       HomeScreen(onAddItem: _addPantryItem),
-      InventoryScreen(pantryItems: _pantryItems, onAddItem: _addPantryItem),
+      InventoryScreen(
+        pantryItems: _pantryItems,
+        onAddItem: _addPantryItem,
+        onDeleteItem: _deletePantryItem,
+      ),
       const SettingsScreen(),
     ];
 
