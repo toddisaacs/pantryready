@@ -44,7 +44,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppConstants.primaryColor.withOpacity(0.1),
+                  backgroundColor: AppConstants.primaryColor.withValues(
+                    alpha: 0.1,
+                  ),
                   child: Icon(
                     Icons.person,
                     size: 32,

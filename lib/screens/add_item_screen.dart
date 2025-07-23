@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
-import 'dart:math';
 
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({super.key});

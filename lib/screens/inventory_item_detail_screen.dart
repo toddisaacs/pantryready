@@ -66,7 +66,7 @@ class InventoryItemDetailScreen extends StatelessWidget {
               radius: 30,
               backgroundColor: _getCategoryColor(
                 item.category,
-              ).withOpacity(0.1),
+              ).withValues(alpha: 0.1),
               child: Icon(
                 _getCategoryIcon(item.category),
                 size: 32,

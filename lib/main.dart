@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pantryready/firebase_options.dart';
 import 'package:pantryready/screens/add_item_screen.dart';
-import 'package:pantryready/screens/home_screen.dart';
 import 'package:pantryready/screens/inventory_screen.dart';
-import 'package:pantryready/screens/settings_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/constants/app_constants.dart';
 
@@ -102,7 +100,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> _widgetOptions = <Widget>[
+    final List<Widget> widgetOptions = <Widget>[
       HomeScreen(onAddItem: _addPantryItem),
       InventoryScreen(
         pantryItems: _pantryItems,
@@ -132,7 +130,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
         ],
       ),
-      body: IndexedStack(index: _selectedIndex, children: _widgetOptions),
+      body: IndexedStack(index: _selectedIndex, children: widgetOptions),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),

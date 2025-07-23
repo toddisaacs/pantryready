@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pantryready/screens/inventory_item_detail_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
-import 'package:pantryready/constants/app_constants.dart';
 
 void main() {
   group('Delete Functionality Tests', () {

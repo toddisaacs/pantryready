@@ -179,7 +179,7 @@ class HomeScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppConstants.primaryColor.withOpacity(0.1),
+          backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.1),
           child: Icon(Icons.kitchen, color: AppConstants.primaryColor),
         ),
         title: Text(

@@ -93,7 +93,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         color: AppConstants.cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 1),
@@ -166,7 +166,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         });
       },
       backgroundColor: AppConstants.backgroundColor,
-      selectedColor: AppConstants.primaryColor.withOpacity(0.2),
+      selectedColor: AppConstants.primaryColor.withValues(alpha: 0.2),
       checkmarkColor: AppConstants.primaryColor,
       labelStyle: TextStyle(
         color: isSelected ? AppConstants.primaryColor : AppConstants.textColor,
@@ -250,7 +250,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       elevation: 1,
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getCategoryColor(item.category).withOpacity(0.1),
+          backgroundColor: _getCategoryColor(
+            item.category,
+          ).withValues(alpha: 0.1),
           child: Icon(
             _getCategoryIcon(item.category),
             color: _getCategoryColor(item.category),
