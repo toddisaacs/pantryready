@@ -114,7 +114,7 @@ void main() {
       expect(find.text('Test Item'), findsWidgets);
     });
 
-    testWidgets('Delete without onDelete callback shows error message', (
+    testWidgets('Delete button not shown when onDelete callback is null', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -126,16 +126,8 @@ void main() {
         ),
       );
 
-      // Tap delete button
-      await tester.tap(find.byIcon(Icons.delete));
-      await tester.pumpAndSettle();
-
-      // Confirm delete
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
-
-      // Verify error message appears
-      expect(find.text('Delete functionality not available'), findsOneWidget);
+      // Verify delete button is not present
+      expect(find.byIcon(Icons.delete), findsNothing);
     });
   });
 }

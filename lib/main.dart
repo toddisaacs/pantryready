@@ -4,6 +4,7 @@ import 'package:pantryready/firebase_options.dart';
 import 'package:pantryready/screens/add_item_screen.dart';
 import 'package:pantryready/screens/inventory_screen.dart';
 import 'package:pantryready/screens/barcode_scanner_screen.dart';
+import 'package:pantryready/screens/edit_item_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/constants/app_constants.dart';
 
@@ -97,6 +98,33 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       _pantryItems.removeWhere((pantryItem) => pantryItem.id == item.id);
     });
+  }
+
+  // Method to edit an existing pantry item
+  void _editPantryItem(PantryItem item) async {
+    final PantryItem? updatedItem = await Navigator.push<PantryItem>(
+      context,
+      MaterialPageRoute(builder: (context) => EditItemScreen(item: item)),
+    );
+
+    if (updatedItem != null) {
+      setState(() {
+        final index = _pantryItems.indexWhere((i) => i.id == item.id);
+        if (index != -1) {
+          _pantryItems[index] = updatedItem;
+        }
+      });
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Updated ${updatedItem.name}'),
+            backgroundColor: AppConstants.successColor,
+          ),
+        );
+      }
+    }
   }
 
   // Method to handle barcode scanning
@@ -225,6 +253,7 @@ class _MainScreenState extends State<MainScreen> {
         pantryItems: _pantryItems,
         onAddItem: _addPantryItem,
         onDeleteItem: _deletePantryItem,
+        onEditItem: _editPantryItem,
       ),
       const SettingsScreen(),
     ];

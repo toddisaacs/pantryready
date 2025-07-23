@@ -5,11 +5,13 @@ import 'package:pantryready/models/pantry_item.dart';
 class InventoryItemDetailScreen extends StatelessWidget {
   final PantryItem item;
   final Function(PantryItem)? onDelete;
+  final Function(PantryItem)? onEdit;
 
   const InventoryItemDetailScreen({
     super.key,
     required this.item,
     this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -20,23 +22,18 @@ class InventoryItemDetailScreen extends StatelessWidget {
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              // TODO: Navigate to edit item screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Edit functionality coming soon!'),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              _showDeleteConfirmation(context);
-            },
-          ),
+          if (onEdit != null)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => onEdit!(item),
+              tooltip: 'Edit Item',
+            ),
+          if (onDelete != null)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => _showDeleteConfirmation(context),
+              tooltip: 'Delete Item',
+            ),
         ],
       ),
       body: SingleChildScrollView(

@@ -7,13 +7,15 @@ import 'package:pantryready/screens/inventory_item_detail_screen.dart';
 class InventoryScreen extends StatefulWidget {
   final List<PantryItem> pantryItems;
   final Function(PantryItem?) onAddItem;
-  final Function(PantryItem)? onDeleteItem;
+  final Function(PantryItem) onDeleteItem;
+  final Function(PantryItem) onEditItem;
 
   const InventoryScreen({
     super.key,
     required this.pantryItems,
     required this.onAddItem,
-    this.onDeleteItem,
+    required this.onDeleteItem,
+    required this.onEditItem,
   });
 
   @override
@@ -295,7 +297,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
           ],
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, size: 20),
+              onPressed: () => widget.onEditItem(item),
+              tooltip: 'Edit Item',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
         onTap: () {
           Navigator.push(
             context,
@@ -304,6 +318,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   (context) => InventoryItemDetailScreen(
                     item: item,
                     onDelete: widget.onDeleteItem,
+                    onEdit: widget.onEditItem,
                   ),
             ),
           );
