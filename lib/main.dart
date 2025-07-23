@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pantryready/firebase_options.dart';
 import 'package:pantryready/screens/add_item_screen.dart';
+import 'package:pantryready/screens/home_screen.dart';
 import 'package:pantryready/screens/inventory_screen.dart';
 import 'package:pantryready/screens/barcode_scanner_screen.dart';
 import 'package:pantryready/screens/edit_item_screen.dart';
+import 'package:pantryready/screens/settings_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/services/product_api_service.dart';
 import 'package:pantryready/services/openfoodfacts_service.dart';
 import 'package:pantryready/services/mock_product_api_service.dart';
+import 'package:pantryready/services/data_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,10 +37,15 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   late ProductApiService _productApiService;
   bool _useOpenFoodFacts = true; // Toggle for testing
 
+  // Data service - can be switched between local and Firestore
+  late DataService _dataService;
+  bool _useFirestore = true; // Toggle for data storage - default to Firestore
+
   @override
   void initState() {
     super.initState();
     _initializeApiService();
+    _initializeDataService();
     _loadSampleData();
   }
 
@@ -46,6 +54,14 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
       _productApiService = OpenFoodFactsService();
     } else {
       _productApiService = MockProductApiService();
+    }
+  }
+
+  void _initializeDataService() {
+    if (_useFirestore) {
+      _dataService = FirestoreDataService();
+    } else {
+      _dataService = LocalDataService();
     }
   }
 
@@ -74,6 +90,9 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
       setState(() {
         _pantryItems.add(item);
       });
+
+      // Also save to data service
+      _dataService.addPantryItem(item);
     }
   }
 
@@ -81,6 +100,9 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     setState(() {
       _pantryItems.removeWhere((pantryItem) => pantryItem.id == item.id);
     });
+
+    // Also delete from data service
+    _dataService.deletePantryItem(item.id);
   }
 
   // Method to edit an existing pantry item (direct navigation)
@@ -108,6 +130,9 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
         _pantryItems[index] = updatedItem;
       }
     });
+
+    // Also update in data service
+    _dataService.updatePantryItem(updatedItem);
 
     // Show success message
     if (mounted) {
@@ -531,7 +556,42 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     return Builder(
       builder: (scaffoldContext) {
         final List<Widget> widgetOptions = <Widget>[
-          HomeScreen(onAddItem: _addPantryItem),
+          HomeScreen(
+            onAddItem: _addPantryItem,
+            useFirestore: _useFirestore,
+            onTestFirestore: () async {
+              try {
+                // Test Firestore connection by adding a test item
+                final testItem = PantryItem(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  name: 'Firestore Test Item',
+                  quantity: 1,
+                  unit: 'piece',
+                  category: 'Other',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+
+                await _dataService.addPantryItem(testItem);
+
+                _scaffoldMessengerKey.currentState?.showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      '✅ Firestore connection successful! Test item added.',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                _scaffoldMessengerKey.currentState?.showSnackBar(
+                  SnackBar(
+                    content: Text('❌ Firestore connection failed: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
           InventoryScreen(
             pantryItems: _pantryItems,
             onAddItem: _addPantryItem,
@@ -539,7 +599,38 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
             onEditItem: (item) => _editPantryItem(item, scaffoldContext),
             onItemUpdated: _handleUpdatedItem,
           ),
-          const SettingsScreen(),
+          SettingsScreen(
+            useFirestore: _useFirestore,
+            onFirestoreToggle: (value) {
+              setState(() {
+                _useFirestore = value;
+                _initializeDataService();
+              });
+              _scaffoldMessengerKey.currentState?.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Switched to ${_useFirestore ? 'Firestore' : 'Local'} storage',
+                  ),
+                  backgroundColor: AppConstants.successColor,
+                ),
+              );
+            },
+            useOpenFoodFacts: _useOpenFoodFacts,
+            onApiToggle: (value) {
+              setState(() {
+                _useOpenFoodFacts = value;
+                _initializeApiService();
+              });
+              _scaffoldMessengerKey.currentState?.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Switched to ${_productApiService.serviceName}',
+                  ),
+                  backgroundColor: AppConstants.successColor,
+                ),
+              );
+            },
+          ),
         ];
 
         return Scaffold(
@@ -593,28 +684,5 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
         );
       },
     );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  final Function(PantryItem?) onAddItem;
-
-  const HomeScreen({super.key, required this.onAddItem});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'Welcome to PantryReady!',
-      style: TextStyle(fontSize: 24),
-    );
-  }
-}
-
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text('Settings Screen', style: TextStyle(fontSize: 24));
   }
 }

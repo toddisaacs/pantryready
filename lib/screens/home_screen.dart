@@ -5,8 +5,15 @@ import 'package:pantryready/screens/add_item_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(PantryItem?) onAddItem;
+  final bool useFirestore;
+  final VoidCallback? onTestFirestore;
 
-  const HomeScreen({super.key, required this.onAddItem});
+  const HomeScreen({
+    super.key,
+    required this.onAddItem,
+    this.useFirestore = false,
+    this.onTestFirestore,
+  });
 
   static const Widget _spacer = SizedBox(height: 24);
 
@@ -19,6 +26,8 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildWelcomeSection(),
+            _spacer,
+            _buildStorageInfoSection(),
             _spacer,
             _buildQuickStatsSection(),
             _spacer,
@@ -57,6 +66,57 @@ class HomeScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 color: AppConstants.textSecondaryColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStorageInfoSection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  useFirestore ? Icons.cloud : Icons.storage,
+                  size: 24,
+                  color: useFirestore ? Colors.blue : Colors.orange,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Storage Mode: ${useFirestore ? 'Firestore' : 'Local'}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              useFirestore
+                  ? 'Data is stored in Firebase Firestore cloud database'
+                  : 'Data is stored locally on this device',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: onTestFirestore,
+              icon: const Icon(Icons.cloud_upload),
+              label: const Text('Test Firestore Connection'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
               ),
             ),
           ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pantryready/main.dart';
+import 'package:pantryready/screens/inventory_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/screens/edit_item_screen.dart';
 import 'package:pantryready/screens/inventory_item_detail_screen.dart';
@@ -217,14 +217,32 @@ void main() {
     testWidgets('Inventory list items show edit button', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(const PantryReadyApp());
+      // Test the InventoryScreen directly instead of the full app to avoid Firebase issues
+      final testItems = [
+        PantryItem(
+          id: '1',
+          name: 'Test Item',
+          quantity: 1.0,
+          unit: 'pieces',
+          category: 'Snacks',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      ];
 
-      // Navigate to inventory screen
-      await tester.tap(find.text('Inventory'));
-      await tester.pump();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: InventoryScreen(
+            pantryItems: testItems,
+            onAddItem: (item) {},
+            onDeleteItem: (item) {},
+            onEditItem: (item) {},
+            onItemUpdated: (item) {},
+          ),
+        ),
+      );
 
-      // Should show edit icons for list items (if any items exist)
-      // Note: This test assumes sample data exists
+      // Should show edit icons for list items
       final editButtons = find.byIcon(Icons.edit);
       expect(editButtons, findsWidgets); // Should find at least one edit button
     });

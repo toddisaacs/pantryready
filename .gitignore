@@ -43,3 +43,20 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase Configuration (Sensitive Data)
+# These files contain API keys and project IDs that should not be committed
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+firebase.json
+.firebaserc
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Generated Firebase files
+lib/generated_plugin_registrant.dart

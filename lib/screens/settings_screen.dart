@@ -2,7 +2,18 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool useFirestore;
+  final Function(bool) onFirestoreToggle;
+  final bool useOpenFoodFacts;
+  final Function(bool) onApiToggle;
+
+  const SettingsScreen({
+    super.key,
+    required this.useFirestore,
+    required this.onFirestoreToggle,
+    required this.useOpenFoodFacts,
+    required this.onApiToggle,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -111,6 +122,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: AppConstants.textColor,
               ),
             ),
+          ),
+          SwitchListTile(
+            title: const Text('Use Firestore'),
+            subtitle: const Text(
+              'Store data in Firebase Firestore cloud database',
+            ),
+            value: widget.useFirestore,
+            onChanged: widget.onFirestoreToggle,
+            secondary: const Icon(Icons.cloud),
+          ),
+          SwitchListTile(
+            title: const Text('Use OpenFoodFacts API'),
+            subtitle: const Text(
+              'Look up product information from OpenFoodFacts',
+            ),
+            value: widget.useOpenFoodFacts,
+            onChanged: widget.onApiToggle,
+            secondary: const Icon(Icons.api),
           ),
           SwitchListTile(
             title: const Text('Notifications'),
