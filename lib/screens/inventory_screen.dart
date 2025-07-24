@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
-import 'package:pantryready/screens/add_item_screen.dart';
 import 'package:pantryready/screens/inventory_item_detail_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -75,17 +74,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final newItem = await Navigator.push<PantryItem>(
-            context,
-            MaterialPageRoute(builder: (context) => const AddItemScreen()),
-          );
-          widget.onAddItem(newItem);
-        },
-        backgroundColor: AppConstants.primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      // FAB is now handled by the parent
     );
   }
 
@@ -302,6 +291,32 @@ class _InventoryScreenState extends State<InventoryScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            IconButton(
+              icon: const Icon(Icons.add, size: 20),
+              tooltip: 'Add One',
+              onPressed: () {
+                final updated = item.copyWith(
+                  quantity: item.quantity + 1,
+                  updatedAt: DateTime.now(),
+                );
+                widget.onItemUpdated(updated);
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+            IconButton(
+              icon: const Icon(Icons.remove, size: 20),
+              tooltip: 'Remove One',
+              onPressed: () {
+                final updated = item.copyWith(
+                  quantity: (item.quantity - 1).clamp(0, double.infinity),
+                  updatedAt: DateTime.now(),
+                );
+                widget.onItemUpdated(updated);
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
             IconButton(
               icon: const Icon(Icons.edit, size: 20),
               onPressed: () => widget.onEditItem(item),

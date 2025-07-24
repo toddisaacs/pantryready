@@ -11,9 +11,6 @@ import 'package:pantryready/screens/settings_screen.dart';
 import 'package:pantryready/screens/environment_settings_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/constants/app_constants.dart';
-import 'package:pantryready/services/product_api_service.dart';
-import 'package:pantryready/services/openfoodfacts_service.dart';
-import 'package:pantryready/services/mock_product_api_service.dart';
 import 'package:pantryready/services/data_service.dart';
 import 'package:pantryready/services/data_service_factory.dart';
 import 'package:pantryready/config/environment_config.dart';
@@ -60,7 +57,6 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
       GlobalKey<ScaffoldMessengerState>();
 
   // Product API service - can be switched between implementations
-  late ProductApiService _productApiService;
   bool _useOpenFoodFacts = true; // Toggle for testing
 
   // Data service - managed by factory
@@ -76,29 +72,14 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
 
   void _initializeApiService() {
     if (_useOpenFoodFacts) {
-      _productApiService = OpenFoodFactsService();
+      // _productApiService = OpenFoodFactsService(); // This line is removed
     } else {
-      _productApiService = MockProductApiService();
+      // _productApiService = MockProductApiService(); // This line is removed
     }
   }
 
   void _initializeDataService() {
     _dataService = DataServiceFactory.getDataService();
-  }
-
-  // Method to switch API service (useful for testing)
-  void _switchApiService() {
-    setState(() {
-      _useOpenFoodFacts = !_useOpenFoodFacts;
-      _initializeApiService();
-    });
-
-    _scaffoldMessengerKey.currentState?.showSnackBar(
-      SnackBar(
-        content: Text('Switched to ${_productApiService.serviceName}'),
-        backgroundColor: AppConstants.successColor,
-      ),
-    );
   }
 
   // Method to handle data service changes from environment settings
@@ -172,280 +153,6 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
 
     // Also update in data service
     _dataService.updatePantryItem(updatedItem);
-  }
-
-  // Enhanced method to handle barcode scanning with API integration
-  void _handleBarcodeScanning(BuildContext scaffoldContext) async {
-    final String? scannedBarcode = await Navigator.push<String>(
-      scaffoldContext,
-      MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
-    );
-
-    if (scannedBarcode != null && scannedBarcode.isNotEmpty && mounted) {
-      // Show loading indicator
-      if (!mounted) return;
-      showDialog(
-        context: scaffoldContext,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-
-      try {
-        // Look up product information using the API
-        final ProductLookupResult result = await _productApiService
-            .lookupProduct(scannedBarcode);
-
-        if (mounted) {
-          Navigator.of(scaffoldContext).pop(); // Dismiss loading dialog
-
-          if (result.found) {
-            await _handleApiProductResult(
-              result,
-              scannedBarcode,
-              scaffoldContext,
-            );
-          } else if (result.errorMessage != null) {
-            // Show error and fall back to manual entry
-            if (mounted) {
-              await _showApiErrorDialog(
-                result.errorMessage!,
-                scannedBarcode,
-                scaffoldContext,
-              );
-            }
-          } else {
-            // Product not found, proceed with manual entry
-            if (mounted) {
-              await _handleProductNotFound(scannedBarcode, scaffoldContext);
-            }
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          Navigator.of(scaffoldContext).pop(); // Dismiss loading dialog
-          if (mounted) {
-            await _showApiErrorDialog(
-              'Unexpected error: ${e.toString()}',
-              scannedBarcode,
-              scaffoldContext,
-            );
-          }
-        }
-      }
-    }
-  }
-
-  // Handle successful API product lookup
-  Future<void> _handleApiProductResult(
-    ProductLookupResult result,
-    String barcode,
-    BuildContext scaffoldContext,
-  ) async {
-    // Check if item already exists
-    final existingItem =
-        _pantryItems.where((item) => item.barcode == barcode).firstOrNull;
-
-    if (existingItem != null) {
-      _showQuantityUpdateDialog(existingItem, result.name!);
-    } else {
-      // Create new item from API data
-      final newItem = result.toPantryItem(barcode: barcode);
-      await _showApiProductDialog(newItem, result, scaffoldContext);
-    }
-  }
-
-  // Show dialog with API product information and option to add/customize
-  Future<void> _showApiProductDialog(
-    PantryItem suggestedItem,
-    ProductLookupResult result,
-    BuildContext scaffoldContext,
-  ) async {
-    if (!mounted) return;
-
-    final bool? shouldAdd = await showDialog<bool>(
-      context: scaffoldContext,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Product Found: ${result.name}'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (result.brand != null)
-                    Text(
-                      'Brand: ${result.brand}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  if (result.category != null)
-                    Text('Category: ${result.category}'),
-                  if (result.ingredients != null) ...[
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Ingredients:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      result.ingredients!,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                  if (result.nutritionFacts != null &&
-                      result.nutritionFacts!.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Nutrition (per 100g):',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    ...result.nutritionFacts!.entries.map(
-                      (entry) => Text(
-                        '${_formatNutritionKey(entry.key)}: ${entry.value}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  const Text('Would you like to add this item to your pantry?'),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Customize'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Add Item'),
-              ),
-            ],
-          ),
-    );
-
-    if (shouldAdd == true && mounted) {
-      // Navigate to add item screen with pre-filled data
-      final PantryItem? newItem = await Navigator.push<PantryItem>(
-        scaffoldContext,
-        MaterialPageRoute(
-          builder:
-              (context) => AddItemScreen(
-                initialBarcode: suggestedItem.barcode,
-                suggestedItem: suggestedItem,
-              ),
-        ),
-      );
-
-      if (newItem != null && mounted) {
-        _addPantryItem(newItem);
-      }
-    }
-  }
-
-  // Handle product not found in API
-  Future<void> _handleProductNotFound(
-    String barcode,
-    BuildContext scaffoldContext,
-  ) async {
-    if (!mounted) return;
-
-    final bool? shouldAdd = await showDialog<bool>(
-      context: scaffoldContext,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Product Not Found'),
-            content: Text(
-              'No product information found for barcode $barcode.\nWould you like to add it manually?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Add Manually'),
-              ),
-            ],
-          ),
-    );
-
-    if (shouldAdd == true && mounted) {
-      final PantryItem? newItem = await Navigator.push<PantryItem>(
-        scaffoldContext,
-        MaterialPageRoute(
-          builder: (context) => AddItemScreen(initialBarcode: barcode),
-        ),
-      );
-
-      if (newItem != null && mounted) {
-        _addPantryItem(newItem);
-      }
-    }
-  }
-
-  // Show API error dialog with fallback option
-  Future<void> _showApiErrorDialog(
-    String error,
-    String barcode,
-    BuildContext scaffoldContext,
-  ) async {
-    if (!mounted) return;
-
-    final bool? shouldContinue = await showDialog<bool>(
-      context: scaffoldContext,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('API Error'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Error looking up product: $error'),
-                const SizedBox(height: 16),
-                const Text('Would you like to add the item manually instead?'),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Add Manually'),
-              ),
-            ],
-          ),
-    );
-
-    if (shouldContinue == true && mounted) {
-      final PantryItem? newItem = await Navigator.push<PantryItem>(
-        scaffoldContext,
-        MaterialPageRoute(
-          builder: (context) => AddItemScreen(initialBarcode: barcode),
-        ),
-      );
-
-      if (newItem != null && mounted) {
-        _addPantryItem(newItem);
-      }
-    }
   }
 
   // Format nutrition fact keys for display
@@ -621,19 +328,96 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
         ),
         floatingActionButton:
             _selectedIndex == 1
-                ? FloatingActionButton(
-                  onPressed: () async {
-                    final PantryItem? newItem =
-                        await Navigator.push<PantryItem>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AddItemScreen(),
-                          ),
-                        );
-                    _addPantryItem(newItem);
-                  },
-                  backgroundColor: AppConstants.primaryColor,
-                  child: const Icon(Icons.add, color: Colors.white),
+                ? Builder(
+                  builder:
+                      (fabContext) => FloatingActionButton(
+                        onPressed: () async {
+                          // Scan barcode first
+                          final String? scannedBarcode =
+                              await Navigator.push<String>(
+                                fabContext,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => const BarcodeScannerScreen(),
+                                ),
+                              );
+                          if (scannedBarcode == null || scannedBarcode.isEmpty)
+                            return;
+                          PantryItem? existingItem;
+                          for (final item in _pantryItems) {
+                            if (item.barcode == scannedBarcode) {
+                              existingItem = item;
+                              break;
+                            }
+                          }
+                          if (existingItem == null) {
+                            final PantryItem? newItem =
+                                await Navigator.push<PantryItem>(
+                                  fabContext,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => AddItemScreen(
+                                          initialBarcode: scannedBarcode,
+                                        ),
+                                  ),
+                                );
+                            _addPantryItem(newItem);
+                            return;
+                          }
+                          final PantryItem item = existingItem;
+                          showDialog(
+                            context: fabContext,
+                            builder:
+                                (context) => AlertDialog(
+                                  title: Text('Item Found: ${item.name}'),
+                                  content: Text(
+                                    'Quantity: ${item.quantity} ${item.unit}',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        final updated = item.copyWith(
+                                          quantity: item.quantity + 1,
+                                          updatedAt: DateTime.now(),
+                                        );
+                                        _updatePantryItem(updated);
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text('+1'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        final updated = item.copyWith(
+                                          quantity: (item.quantity - 1).clamp(
+                                            0,
+                                            double.infinity,
+                                          ),
+                                          updatedAt: DateTime.now(),
+                                        );
+                                        _updatePantryItem(updated);
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text('-1'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        _editPantryItem(item, fabContext);
+                                      },
+                                      child: const Text('Edit'),
+                                    ),
+                                  ],
+                                ),
+                          );
+                          return;
+                        },
+                        backgroundColor: AppConstants.primaryColor,
+                        child: const Icon(
+                          Icons.qr_code_scanner,
+                          color: Colors.white,
+                        ),
+                        tooltip: 'Scan Barcode',
+                      ),
                 )
                 : null,
       ),
