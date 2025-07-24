@@ -38,10 +38,17 @@ A Flutter app for managing your pantry inventory with barcode scanning and produ
    chmod +x scripts/setup_firebase.sh
    ./scripts/setup_firebase.sh
    ```
-   
    Choose option 1 for development without Firebase, or option 2 for Firebase setup.
 
-4. **Run the app**
+4. **Configure firebase.json (if using Firebase)**
+   - Copy the template and fill in your real values:
+     ```bash
+     cp firebase.json.template firebase.json
+     # Edit firebase.json and add your real Firebase project/app IDs
+     ```
+   - **Never commit your real firebase.json!**
+
+5. **Run the app**
    ```bash
    flutter run
    ```
@@ -73,7 +80,15 @@ For full Firebase integration:
    # Choose: 2. Set up with real Firebase project
    ```
 
-3. **Update Firestore rules**
+3. **Configure firebase.json**
+   - Copy the template and fill in your real values:
+     ```bash
+     cp firebase.json.template firebase.json
+     # Edit firebase.json and add your real Firebase project/app IDs
+     ```
+   - **Never commit your real firebase.json!**
+
+4. **Update Firestore rules**
    - Copy the rules from `firestore_rules.txt` to your Firebase console
    - Or use the provided rules for development
 
@@ -127,12 +142,15 @@ User Input → UI Layer → Service Layer → Storage Layer
 
 - **Safe for Git**: Template files with placeholder values
 - **Excluded Files**: Real Firebase config files are in `.gitignore`
+- **firebase.json**: Your real `firebase.json` is ignored by Git. Use `firebase.json.template` for sharing structure.
+- **How to use**: Copy `firebase.json.template` to `firebase.json` and fill in your real values locally.
 - **Environment Variables**: Support for build-time configuration
 - **Setup Script**: Automated configuration management
 
 ### Files Excluded from Git
 
 - `lib/firebase_options.dart` - Contains real API keys
+- `firebase.json` - Contains real Firebase project/app IDs
 - `android/app/google-services.json` - Android Firebase config
 - `ios/Runner/GoogleService-Info.plist` - iOS Firebase config
 - `firebase.json` - Firebase project configuration
@@ -209,6 +227,7 @@ flutter build web \
 ### Development Guidelines
 
 - **Never commit real Firebase configuration**
+- **Never commit your real firebase.json**
 - **Use placeholder values for development**
 - **Test both with and without Firebase**
 - **Follow Flutter best practices**

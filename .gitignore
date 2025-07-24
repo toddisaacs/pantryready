@@ -61,3 +61,4 @@ firebase.json
 # Generated Firebase files
 lib/generated_plugin_registrant.dart
 firepit-log.txt
+firebase.json
