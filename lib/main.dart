@@ -125,12 +125,12 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
 
   // Method to edit an existing pantry item (direct navigation)
   void _editPantryItem(PantryItem item, BuildContext scaffoldContext) async {
+    final bool wasMounted = mounted;
     final PantryItem? updatedItem = await Navigator.push<PantryItem>(
       scaffoldContext,
       MaterialPageRoute(builder: (context) => EditItemScreen(item: item)),
     );
-
-    if (updatedItem != null) {
+    if (wasMounted && updatedItem != null) {
       _updatePantryItem(updatedItem);
     }
   }
@@ -155,93 +155,10 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     _dataService.updatePantryItem(updatedItem);
   }
 
-  // Format nutrition fact keys for display
-  String _formatNutritionKey(String key) {
-    return key
-        .replaceAll('_', ' ')
-        .split(' ')
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
-  }
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-  }
-
-  // Show dialog to update quantity for existing item
-  void _showQuantityUpdateDialog(PantryItem existingItem, String barcode) {
-    final quantityController = TextEditingController(text: '1');
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Item Found: ${existingItem.name}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Current quantity: ${existingItem.quantity} ${existingItem.unit}',
-              ),
-              const SizedBox(height: 16),
-              const Text('Add quantity:'),
-              const SizedBox(height: 8),
-              TextField(
-                controller: quantityController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter quantity to add',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final additionalQuantity =
-                    double.tryParse(quantityController.text) ?? 0;
-                if (additionalQuantity > 0) {
-                  final updatedItem = existingItem.copyWith(
-                    quantity: existingItem.quantity + additionalQuantity,
-                    updatedAt: DateTime.now(),
-                  );
-
-                  setState(() {
-                    final index = _pantryItems.indexWhere(
-                      (item) => item.id == existingItem.id,
-                    );
-                    if (index != -1) {
-                      _pantryItems[index] = updatedItem;
-                    }
-                  });
-
-                  Navigator.of(context).pop();
-
-                  // Show success message
-                  _scaffoldMessengerKey.currentState?.showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Added $additionalQuantity ${existingItem.unit} to ${existingItem.name}',
-                      ),
-                      backgroundColor: AppConstants.successColor,
-                    ),
-                  );
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -341,8 +258,10 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
                                       (context) => const BarcodeScannerScreen(),
                                 ),
                               );
-                          if (scannedBarcode == null || scannedBarcode.isEmpty)
+                          if (scannedBarcode == null ||
+                              scannedBarcode.isEmpty) {
                             return;
+                          }
                           PantryItem? existingItem;
                           for (final item in _pantryItems) {
                             if (item.barcode == scannedBarcode) {
@@ -412,11 +331,11 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
                           return;
                         },
                         backgroundColor: AppConstants.primaryColor,
+                        tooltip: 'Scan Barcode',
                         child: const Icon(
                           Icons.qr_code_scanner,
                           color: Colors.white,
                         ),
-                        tooltip: 'Scan Barcode',
                       ),
                 )
                 : null,
