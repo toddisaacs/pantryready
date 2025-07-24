@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pantryready/firebase_options.dart';
 import 'package:pantryready/screens/add_item_screen.dart';
@@ -7,16 +8,41 @@ import 'package:pantryready/screens/inventory_screen.dart';
 import 'package:pantryready/screens/barcode_scanner_screen.dart';
 import 'package:pantryready/screens/edit_item_screen.dart';
 import 'package:pantryready/screens/settings_screen.dart';
+import 'package:pantryready/screens/environment_settings_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/services/product_api_service.dart';
 import 'package:pantryready/services/openfoodfacts_service.dart';
 import 'package:pantryready/services/mock_product_api_service.dart';
 import 'package:pantryready/services/data_service.dart';
+import 'package:pantryready/services/data_service_factory.dart';
+import 'package:pantryready/config/environment_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Configure based on build mode and arguments
+  if (kReleaseMode) {
+    // Production: Use build-time configuration or default to PROD
+    EnvironmentConfig.configureFromBuildArgs();
+    // Fallback to production if no build args provided
+    if (EnvironmentConfig.environment == Environment.local) {
+      EnvironmentConfig.configureForProd();
+    }
+  } else {
+    // Development: Check for build args or use local development
+    const String buildEnv = String.fromEnvironment(
+      'ENVIRONMENT',
+      defaultValue: '',
+    );
+    if (buildEnv.isNotEmpty) {
+      EnvironmentConfig.configureFromBuildArgs();
+    } else {
+      EnvironmentConfig.configureForLocalDevelopment();
+    }
+  }
+
   runApp(const PantryReadyApp());
 }
 
@@ -37,9 +63,8 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   late ProductApiService _productApiService;
   bool _useOpenFoodFacts = true; // Toggle for testing
 
-  // Data service - can be switched between local and Firestore
+  // Data service - managed by factory
   late DataService _dataService;
-  bool _useFirestore = true; // Toggle for data storage - default to Firestore
 
   @override
   void initState() {
@@ -58,11 +83,7 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   }
 
   void _initializeDataService() {
-    if (_useFirestore) {
-      _dataService = FirestoreDataService();
-    } else {
-      _dataService = LocalDataService();
-    }
+    _dataService = DataServiceFactory.getDataService();
   }
 
   // Method to switch API service (useful for testing)
@@ -75,6 +96,22 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     _scaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
         content: Text('Switched to ${_productApiService.serviceName}'),
+        backgroundColor: AppConstants.successColor,
+      ),
+    );
+  }
+
+  // Method to handle data service changes from environment settings
+  void _onDataServiceChanged(DataService newDataService) {
+    setState(() {
+      _dataService = newDataService;
+    });
+
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Data service changed: ${DataServiceFactory.getCurrentServiceInfo()}',
+        ),
         backgroundColor: AppConstants.successColor,
       ),
     );
@@ -125,7 +162,9 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   // Common method to update pantry item in the list
   void _updatePantryItem(PantryItem updatedItem) {
     setState(() {
-      final index = _pantryItems.indexWhere((i) => i.id == updatedItem.id);
+      final index = _pantryItems.indexWhere(
+        (item) => item.id == updatedItem.id,
+      );
       if (index != -1) {
         _pantryItems[index] = updatedItem;
       }
@@ -133,16 +172,6 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
 
     // Also update in data service
     _dataService.updatePantryItem(updatedItem);
-
-    // Show success message
-    if (mounted) {
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-          content: Text('Updated ${updatedItem.name}'),
-          backgroundColor: AppConstants.successColor,
-        ),
-      );
-    }
   }
 
   // Enhanced method to handle barcode scanning with API integration
@@ -547,142 +576,82 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
           fillColor: AppConstants.backgroundColor,
         ),
       ),
-      home: _buildMainScreen(),
+      home: Scaffold(
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: [
+            HomeScreen(onAddItem: _addPantryItem),
+            InventoryScreen(
+              pantryItems: _pantryItems,
+              onAddItem: _addPantryItem,
+              onDeleteItem: _deletePantryItem,
+              onEditItem: (item) => _editPantryItem(item, context),
+              onItemUpdated: _handleUpdatedItem,
+            ),
+            SettingsScreen(
+              useFirestore: EnvironmentConfig.useFirestore,
+              onFirestoreToggle: (value) {
+                // This will be handled by environment settings now
+              },
+              useOpenFoodFacts: _useOpenFoodFacts,
+              onApiToggle: (value) {
+                setState(() {
+                  _useOpenFoodFacts = value;
+                  _initializeApiService();
+                });
+              },
+            ),
+          ],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.inventory),
+              label: 'Inventory',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          selectedItemColor: AppConstants.primaryColor,
+          onTap: _onItemTapped,
+        ),
+        floatingActionButton:
+            _selectedIndex == 1
+                ? FloatingActionButton(
+                  onPressed: () async {
+                    final PantryItem? newItem =
+                        await Navigator.push<PantryItem>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddItemScreen(),
+                          ),
+                        );
+                    _addPantryItem(newItem);
+                  },
+                  backgroundColor: AppConstants.primaryColor,
+                  child: const Icon(Icons.add, color: Colors.white),
+                )
+                : null,
+      ),
+      routes: {
+        '/add-item': (context) => const AddItemScreen(),
+        '/barcode-scanner': (context) => const BarcodeScannerScreen(),
+        '/environment-settings':
+            (context) => EnvironmentSettingsScreen(
+              onDataServiceChanged: _onDataServiceChanged,
+            ),
+      },
       debugShowCheckedModeBanner: false,
     );
   }
 
-  Widget _buildMainScreen() {
-    return Builder(
-      builder: (scaffoldContext) {
-        final List<Widget> widgetOptions = <Widget>[
-          HomeScreen(
-            onAddItem: _addPantryItem,
-            useFirestore: _useFirestore,
-            onTestFirestore: () async {
-              try {
-                // Test Firestore connection by adding a test item
-                final testItem = PantryItem(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: 'Firestore Test Item',
-                  quantity: 1,
-                  unit: 'piece',
-                  category: 'Other',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-
-                await _dataService.addPantryItem(testItem);
-
-                _scaffoldMessengerKey.currentState?.showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      '✅ Firestore connection successful! Test item added.',
-                    ),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                _scaffoldMessengerKey.currentState?.showSnackBar(
-                  SnackBar(
-                    content: Text('❌ Firestore connection failed: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-          ),
-          InventoryScreen(
-            pantryItems: _pantryItems,
-            onAddItem: _addPantryItem,
-            onDeleteItem: _deletePantryItem,
-            onEditItem: (item) => _editPantryItem(item, scaffoldContext),
-            onItemUpdated: _handleUpdatedItem,
-          ),
-          SettingsScreen(
-            useFirestore: _useFirestore,
-            onFirestoreToggle: (value) {
-              setState(() {
-                _useFirestore = value;
-                _initializeDataService();
-              });
-              _scaffoldMessengerKey.currentState?.showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Switched to ${_useFirestore ? 'Firestore' : 'Local'} storage',
-                  ),
-                  backgroundColor: AppConstants.successColor,
-                ),
-              );
-            },
-            useOpenFoodFacts: _useOpenFoodFacts,
-            onApiToggle: (value) {
-              setState(() {
-                _useOpenFoodFacts = value;
-                _initializeApiService();
-              });
-              _scaffoldMessengerKey.currentState?.showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Switched to ${_productApiService.serviceName}',
-                  ),
-                  backgroundColor: AppConstants.successColor,
-                ),
-              );
-            },
-          ),
-        ];
-
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('PantryReady'),
-            backgroundColor: AppConstants.primaryColor,
-            foregroundColor: Colors.white,
-            actions: [
-              // API service toggle button (for testing)
-              Builder(
-                builder:
-                    (context) => IconButton(
-                      icon: Icon(
-                        _useOpenFoodFacts ? Icons.api : Icons.bug_report,
-                      ),
-                      onPressed: _switchApiService,
-                      tooltip: 'Switch API Service',
-                    ),
-              ),
-              // Barcode scanner button
-              Builder(
-                builder:
-                    (context) => IconButton(
-                      icon: const Icon(Icons.qr_code_scanner),
-                      onPressed: () => _handleBarcodeScanning(context),
-                      tooltip: 'Scan Barcode',
-                    ),
-              ),
-            ],
-          ),
-          body: IndexedStack(index: _selectedIndex, children: widgetOptions),
-          bottomNavigationBar: BottomNavigationBar(
-            items: const <BottomNavigationBarItem>[
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.inventory),
-                label: 'Inventory',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.settings),
-                label: 'Settings',
-              ),
-            ],
-            currentIndex: _selectedIndex,
-            selectedItemColor: AppConstants.primaryColor,
-            unselectedItemColor: AppConstants.textSecondaryColor,
-            onTap: _onItemTapped,
-            type: BottomNavigationBarType.fixed,
-            elevation: 8,
-          ),
-        );
-      },
-    );
+  @override
+  void dispose() {
+    DataServiceFactory.dispose();
+    super.dispose();
   }
 }

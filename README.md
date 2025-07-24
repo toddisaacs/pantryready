@@ -53,6 +53,86 @@ A Flutter app for managing your pantry inventory with barcode scanning and produ
    flutter run
    ```
 
+## 🏗️ Build & Deployment
+
+### Development Builds
+
+For **local development** (uses mock data, no Firebase required):
+```bash
+# Run in development mode
+flutter run
+
+# Or use the convenience script
+./scripts/run_local.sh
+```
+
+For **development with Firestore**:
+```bash
+# Run with DEV Firestore profile
+./scripts/run_dev.sh
+```
+
+### Production Builds
+
+#### Production Web Build
+```bash
+# Build for production (uses PROD Firestore profile)
+./scripts/build_prod.sh
+
+# Or manually:
+flutter build web \
+  --dart-define=ENVIRONMENT=prod \
+  --dart-define=DATA_SOURCE=firestore \
+  --dart-define=FIRESTORE_PROFILE=prod \
+  --release
+```
+
+#### Development Web Build
+```bash
+# Build for development environment
+./scripts/build_dev.sh
+
+# Or manually:
+flutter build web \
+  --dart-define=ENVIRONMENT=dev \
+  --dart-define=DATA_SOURCE=firestore \
+  --dart-define=FIRESTORE_PROFILE=dev \
+  --release
+```
+
+#### Local Mock Build
+```bash
+# Build with mock data (no Firebase required)
+./scripts/build_local.sh
+```
+
+### Environment Configuration
+
+The app supports three environments:
+
+| Environment | Data Source | Firestore Profile | Environment Settings UI |
+|-------------|-------------|-------------------|------------------------|
+| **LOCAL** | Mock Data | N/A | ✅ Visible (Debug) |
+| **DEV** | Firestore | `pantry_items_dev` | ✅ Visible (Debug) |
+| **PROD** | Firestore | `pantry_items_prod` | ❌ Hidden |
+
+### Build Arguments
+
+You can customize builds using these dart-define arguments:
+
+- `ENVIRONMENT`: `local`, `dev`, `prod`
+- `DATA_SOURCE`: `mock`, `local`, `firestore`
+- `FIRESTORE_PROFILE`: `dev`, `prod`, `test`
+
+Example:
+```bash
+flutter build web \
+  --dart-define=ENVIRONMENT=dev \
+  --dart-define=DATA_SOURCE=firestore \
+  --dart-define=FIRESTORE_PROFILE=test \
+  --release
+```
+
 ## 🔧 Development Setup
 
 ### Option 1: Development Without Firebase (Recommended for new developers)

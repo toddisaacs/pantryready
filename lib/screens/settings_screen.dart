@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
+import '../config/environment_config.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool useFirestore;
@@ -36,7 +38,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildPreferencesSection(),
           const SizedBox(height: 24),
           _buildDataSection(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+          // Only show environment section in debug mode
+          if (EnvironmentConfig.allowEnvironmentSwitching()) ...[
+            _buildEnvironmentSection(),
+            const SizedBox(height: 20),
+          ],
           _buildAboutSection(),
         ],
       ),
@@ -242,6 +249,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               _showClearDataDialog();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnvironmentSection() {
+    return Card(
+      elevation: 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              children: [
+                Text(
+                  'Environment & Data',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppConstants.textColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'DEBUG',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings_system_daydream),
+            title: const Text('Environment Settings'),
+            subtitle: const Text('Configure data sources and environments'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.pushNamed(context, '/environment-settings');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.api),
+            title: const Text('API Configuration'),
+            subtitle: Text(
+              'Current: ${widget.useOpenFoodFacts ? 'Open Food Facts' : 'Mock API'}',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              widget.onApiToggle(!widget.useOpenFoodFacts);
             },
           ),
         ],
