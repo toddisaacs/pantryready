@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/screens/add_item_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(PantryItem?) onAddItem;
+  final List<PantryItem> pantryItems;
   final bool useFirestore;
   final VoidCallback? onTestFirestore;
 
   const HomeScreen({
     super.key,
     required this.onAddItem,
+    required this.pantryItems,
     this.useFirestore = false,
     this.onTestFirestore,
   });
@@ -126,11 +129,10 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildQuickStatsSection() {
-    final sampleItems = AppConstants.samplePantryItems;
-    final totalItems = sampleItems.length;
-    final lowStockItems = sampleItems.where((item) => item.quantity < 5).length;
+    final totalItems = pantryItems.length;
+    final lowStockItems = pantryItems.where((item) => item.quantity < 5).length;
     final expiringItems =
-        sampleItems
+        pantryItems
             .where(
               (item) =>
                   item.expiryDate != null &&
@@ -219,7 +221,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildRecentItemsSection() {
-    final recentItems = AppConstants.samplePantryItems.take(3).toList();
+    final recentItems = pantryItems.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

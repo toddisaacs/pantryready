@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/services/data_service.dart';
 
@@ -137,7 +138,7 @@ class MockDataService implements DataService {
     ];
 
     _items.addAll(sampleItems);
-    _notifyListeners();
+    // Don't notify listeners here - wait until stream is accessed
   }
 
   void _notifyListeners() {
@@ -146,6 +147,10 @@ class MockDataService implements DataService {
 
   @override
   Stream<List<PantryItem>> getPantryItems() {
+    // Emit initial data after a short delay to ensure listener is set up
+    Future.delayed(const Duration(milliseconds: 10), () {
+      _itemsController.add(_items);
+    });
     return _itemsController.stream;
   }
 

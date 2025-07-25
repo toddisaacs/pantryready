@@ -98,12 +98,17 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   // Load data from the current data service
   void _loadDataFromService() {
     _dataSubscription?.cancel();
-    _dataSubscription = _dataService.getPantryItems().listen((items) {
-      setState(() {
-        _pantryItems.clear();
-        _pantryItems.addAll(items);
-      });
-    });
+    _dataSubscription = _dataService.getPantryItems().listen(
+      (items) {
+        setState(() {
+          _pantryItems.clear();
+          _pantryItems.addAll(items);
+        });
+      },
+      onError: (error) {
+        debugPrint('Error loading data: $error');
+      },
+    );
   }
 
   void _addPantryItem(PantryItem? item) {
@@ -229,6 +234,7 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
               key: ValueKey(
                 'home_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
               ),
+              pantryItems: _pantryItems,
               onAddItem: _addPantryItem,
               useFirestore: EnvironmentConfig.useFirestore,
               onTestFirestore: _testFirestoreConnection,
