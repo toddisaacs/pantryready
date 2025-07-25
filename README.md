@@ -57,19 +57,32 @@ A Flutter app for managing your pantry inventory with barcode scanning and produ
 
 ### Development Builds
 
-For **local development** (uses mock data, no Firebase required):
+**Simplified Run Script (Recommended):**
 ```bash
-# Run in development mode
-flutter run
+# Default: dev environment with device selection
+./scripts/run.sh
 
-# Or use the convenience script
-./scripts/run_local.sh
+# Specific environment with device selection
+./scripts/run.sh dev
+./scripts/run.sh local
+./scripts/run.sh prod
+
+# Specific environment and target
+./scripts/run.sh dev chrome
+./scripts/run.sh local ios
+./scripts/run.sh prod android
 ```
 
-For **development with Firestore**:
+**Legacy Scripts (Still Available):**
 ```bash
-# Run with DEV Firestore profile
+# Local development (mock data)
+./scripts/run_local.sh
+
+# Development with Firestore
 ./scripts/run_dev.sh
+
+# Production with Firestore
+./scripts/run_prod.sh
 ```
 
 ### Production Builds

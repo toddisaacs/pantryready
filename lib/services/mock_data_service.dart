@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/services/data_service.dart';
 

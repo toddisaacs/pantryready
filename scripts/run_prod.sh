@@ -1,37 +1,13 @@
 #!/bin/bash
 
-# Default values
-ENVIRONMENT=${1:-prod}
-TARGET=${2:-}
+# Backward compatibility wrapper for the new unified run.sh script
+# Usage: ./scripts/run_prod.sh [target]
+# Example: ./scripts/run_prod.sh chrome
 
-echo "🚀 Running in $ENVIRONMENT environment..."
+TARGET=${1:-}
 
-# Build the base command
-BASE_CMD="flutter run --dart-define=ENVIRONMENT=$ENVIRONMENT"
-
-# Add environment-specific dart defines
-if [ "$ENVIRONMENT" = "dev" ]; then
-    BASE_CMD="$BASE_CMD --dart-define=DATA_SOURCE=firestore --dart-define=FIRESTORE_PROFILE=dev"
-elif [ "$ENVIRONMENT" = "prod" ]; then
-    BASE_CMD="$BASE_CMD --dart-define=DATA_SOURCE=firestore --dart-define=FIRESTORE_PROFILE=prod"
-elif [ "$ENVIRONMENT" = "local" ]; then
-    BASE_CMD="$BASE_CMD --dart-define=DATA_SOURCE=mock"
-fi
-
-# Handle target selection
 if [ -z "$TARGET" ]; then
-    # No target specified - show device selection
-    echo "No target specified. Available devices:"
-    flutter devices
-    echo ""
-    echo "Starting with device selection..."
-    $BASE_CMD
+    ./scripts/run.sh prod
 else
-    # Target specified - use it directly
-    echo "Using target: $TARGET"
-    if [ "$TARGET" = "chrome" ] || [ "$TARGET" = "web" ]; then
-        $BASE_CMD -d chrome --web-port=8080
-    else
-        $BASE_CMD -d $TARGET
-    fi
+    ./scripts/run.sh prod "$TARGET"
 fi 
