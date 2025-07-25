@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default values
-ENVIRONMENT=${1:-dev}
+ENVIRONMENT=${1:-prod}
 TARGET=${2:-}
 
 echo "🚀 Running in $ENVIRONMENT environment..."
@@ -34,4 +34,4 @@ else
     else
         $BASE_CMD -d $TARGET
     fi
-fi
+fi 

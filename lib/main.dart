@@ -14,6 +14,7 @@ import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/services/data_service.dart';
 import 'package:pantryready/services/data_service_factory.dart';
 import 'package:pantryready/config/environment_config.dart';
+import 'dart:async'; // Added for StreamSubscription
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,27 +56,17 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   final List<PantryItem> _pantryItems = [];
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
-
-  // Product API service - can be switched between implementations
-  bool _useOpenFoodFacts = true; // Toggle for testing
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   // Data service - managed by factory
   late DataService _dataService;
+  StreamSubscription<List<PantryItem>>? _dataSubscription;
 
   @override
   void initState() {
     super.initState();
-    _initializeApiService();
     _initializeDataService();
-    _loadSampleData();
-  }
-
-  void _initializeApiService() {
-    if (_useOpenFoodFacts) {
-      // _productApiService = OpenFoodFactsService(); // This line is removed
-    } else {
-      // _productApiService = MockProductApiService(); // This line is removed
-    }
+    _loadDataFromService();
   }
 
   void _initializeDataService() {
@@ -84,9 +75,15 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
 
   // Method to handle data service changes from environment settings
   void _onDataServiceChanged(DataService newDataService) {
+    // Cancel previous subscription
+    _dataSubscription?.cancel();
+
     setState(() {
       _dataService = newDataService;
     });
+
+    // Start listening to the new data service
+    _loadDataFromService();
 
     _scaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
@@ -98,9 +95,15 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     );
   }
 
-  void _loadSampleData() {
-    // Load sample data from AppConstants
-    _pantryItems.addAll(AppConstants.samplePantryItems);
+  // Load data from the current data service
+  void _loadDataFromService() {
+    _dataSubscription?.cancel();
+    _dataSubscription = _dataService.getPantryItems().listen((items) {
+      setState(() {
+        _pantryItems.clear();
+        _pantryItems.addAll(items);
+      });
+    });
   }
 
   void _addPantryItem(PantryItem? item) {
@@ -124,13 +127,15 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   }
 
   // Method to edit an existing pantry item (direct navigation)
-  void _editPantryItem(PantryItem item, BuildContext scaffoldContext) async {
-    final bool wasMounted = mounted;
+  void _editPantryItem(PantryItem item) async {
+    final context = navigatorKey.currentContext;
+    if (context == null || !mounted) return;
+
     final PantryItem? updatedItem = await Navigator.push<PantryItem>(
-      scaffoldContext,
+      context,
       MaterialPageRoute(builder: (context) => EditItemScreen(item: item)),
     );
-    if (wasMounted && updatedItem != null) {
+    if (mounted && updatedItem != null) {
       _updatePantryItem(updatedItem);
     }
   }
@@ -161,10 +166,26 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     });
   }
 
+  // Test Firestore connection
+  void _testFirestoreConnection() {
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Firestore Status: ${EnvironmentConfig.useFirestore ? "Connected" : "Not Connected"} - Profile: ${EnvironmentConfig.firestoreProfile}',
+        ),
+        backgroundColor:
+            EnvironmentConfig.useFirestore
+                ? AppConstants.successColor
+                : Colors.orange,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PantryReady',
+      navigatorKey: navigatorKey,
       scaffoldMessengerKey: _scaffoldMessengerKey,
       theme: ThemeData(
         primarySwatch: Colors.green,
@@ -204,25 +225,38 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
         body: IndexedStack(
           index: _selectedIndex,
           children: [
-            HomeScreen(onAddItem: _addPantryItem),
+            HomeScreen(
+              key: ValueKey(
+                'home_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
+              ),
+              onAddItem: _addPantryItem,
+              useFirestore: EnvironmentConfig.useFirestore,
+              onTestFirestore: _testFirestoreConnection,
+            ),
             InventoryScreen(
+              key: ValueKey(
+                'inventory_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
+              ),
               pantryItems: _pantryItems,
               onAddItem: _addPantryItem,
               onDeleteItem: _deletePantryItem,
-              onEditItem: (item) => _editPantryItem(item, context),
+              onEditItem: (item) => _editPantryItem(item),
               onItemUpdated: _handleUpdatedItem,
             ),
             SettingsScreen(
+              key: ValueKey(
+                'settings_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
+              ),
               useFirestore: EnvironmentConfig.useFirestore,
               onFirestoreToggle: (value) {
                 // This will be handled by environment settings now
               },
-              useOpenFoodFacts: _useOpenFoodFacts,
+              useOpenFoodFacts: true, // _useOpenFoodFacts removed
               onApiToggle: (value) {
-                setState(() {
-                  _useOpenFoodFacts = value;
-                  _initializeApiService();
-                });
+                // setState(() {
+                //   _useOpenFoodFacts = value;
+                //   _initializeApiService();
+                // });
               },
             ),
           ],
@@ -270,64 +304,70 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
                             }
                           }
                           if (existingItem == null) {
-                            final PantryItem? newItem =
-                                await Navigator.push<PantryItem>(
-                                  fabContext,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => AddItemScreen(
-                                          initialBarcode: scannedBarcode,
-                                        ),
-                                  ),
-                                );
-                            _addPantryItem(newItem);
+                            if (mounted) {
+                              final PantryItem? newItem =
+                                  await Navigator.push<PantryItem>(
+                                    fabContext,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => AddItemScreen(
+                                            initialBarcode: scannedBarcode,
+                                          ),
+                                    ),
+                                  );
+                              if (mounted) {
+                                _addPantryItem(newItem);
+                              }
+                            }
                             return;
                           }
                           final PantryItem item = existingItem;
-                          showDialog(
-                            context: fabContext,
-                            builder:
-                                (context) => AlertDialog(
-                                  title: Text('Item Found: ${item.name}'),
-                                  content: Text(
-                                    'Quantity: ${item.quantity} ${item.unit}',
+                          if (mounted) {
+                            showDialog(
+                              context: fabContext,
+                              builder:
+                                  (context) => AlertDialog(
+                                    title: Text('Item Found: ${item.name}'),
+                                    content: Text(
+                                      'Quantity: ${item.quantity} ${item.unit}',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          final updated = item.copyWith(
+                                            quantity: item.quantity + 1,
+                                            updatedAt: DateTime.now(),
+                                          );
+                                          _updatePantryItem(updated);
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: const Text('+1'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          final updated = item.copyWith(
+                                            quantity: (item.quantity - 1).clamp(
+                                              0,
+                                              double.infinity,
+                                            ),
+                                            updatedAt: DateTime.now(),
+                                          );
+                                          _updatePantryItem(updated);
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: const Text('-1'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          _editPantryItem(item);
+                                        },
+                                        child: const Text('Edit'),
+                                      ),
+                                    ],
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        final updated = item.copyWith(
-                                          quantity: item.quantity + 1,
-                                          updatedAt: DateTime.now(),
-                                        );
-                                        _updatePantryItem(updated);
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: const Text('+1'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        final updated = item.copyWith(
-                                          quantity: (item.quantity - 1).clamp(
-                                            0,
-                                            double.infinity,
-                                          ),
-                                          updatedAt: DateTime.now(),
-                                        );
-                                        _updatePantryItem(updated);
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: const Text('-1'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        _editPantryItem(item, fabContext);
-                                      },
-                                      child: const Text('Edit'),
-                                    ),
-                                  ],
-                                ),
-                          );
+                            );
+                          }
                           return;
                         },
                         backgroundColor: AppConstants.primaryColor,
@@ -355,6 +395,7 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   @override
   void dispose() {
     DataServiceFactory.dispose();
+    _dataSubscription?.cancel(); // Cancel the subscription on dispose
     super.dispose();
   }
 }

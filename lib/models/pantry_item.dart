@@ -51,7 +51,7 @@ class PantryItem {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      // ID is excluded - Firestore document ID will be used
       'name': name,
       'quantity': quantity,
       'unit': unit,

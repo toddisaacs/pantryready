@@ -47,6 +47,7 @@ class EnvironmentFirestoreService {
   // Add a new pantry item
   Future<void> addPantryItem(PantryItem item) async {
     try {
+      // Let Firestore auto-generate the document ID
       await _firestore.collection(_collectionName).add(item.toJson());
       debugPrint('Added item to $_collectionName: ${item.name}');
     } catch (e) {
@@ -58,6 +59,7 @@ class EnvironmentFirestoreService {
   // Update an existing pantry item
   Future<void> updatePantryItem(PantryItem item) async {
     try {
+      // Use the Firestore document ID to update the item
       await _firestore
           .collection(_collectionName)
           .doc(item.id)

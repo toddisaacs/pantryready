@@ -140,7 +140,8 @@ void main() {
       final json = item.toJson();
       expect(json['barcode'], equals(testBarcode));
 
-      final deserializedItem = PantryItem.fromJson(json);
+      // Add the ID back for deserialization (like Firestore service does)
+      final deserializedItem = PantryItem.fromJson({'id': item.id, ...json});
       expect(deserializedItem.barcode, equals(testBarcode));
     });
 

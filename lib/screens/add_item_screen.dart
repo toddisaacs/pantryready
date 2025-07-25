@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/screens/barcode_scanner_screen.dart';
+import 'package:pantryready/services/product_api_service.dart';
+import 'package:pantryready/services/openfoodfacts_service.dart';
 
 class AddItemScreen extends StatefulWidget {
   final String? initialBarcode;
@@ -23,14 +25,19 @@ class _AddItemScreenState extends State<AddItemScreen> {
   String _selectedUnit = AppConstants.units.first;
   String _selectedCategory = AppConstants.categories.first;
   DateTime? _selectedExpiryDate;
+  bool _isLoading = false;
+  late ProductApiService _apiService;
 
   @override
   void initState() {
     super.initState();
+    _apiService = OpenFoodFactsService();
 
     // Pre-fill barcode if provided
     if (widget.initialBarcode != null) {
       _barcodeController.text = widget.initialBarcode!;
+      // Try to fetch product details if barcode is provided
+      _fetchProductDetails(widget.initialBarcode!);
     }
 
     // Pre-fill fields from suggested item if provided
@@ -43,6 +50,104 @@ class _AddItemScreenState extends State<AddItemScreen> {
       _selectedCategory = item.category;
       _selectedExpiryDate = item.expiryDate;
     }
+  }
+
+  Future<void> _fetchProductDetails(String barcode) async {
+    if (barcode.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final result = await _apiService.lookupProduct(barcode);
+
+      if (result.found && result.name != null) {
+        setState(() {
+          _nameController.text = result.name!;
+          if (result.category != null) {
+            _selectedCategory = _mapToAppCategory(result.category!);
+          }
+          if (result.brand != null && result.brand!.isNotEmpty) {
+            _notesController.text = 'Brand: ${result.brand}';
+          }
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Found product: ${result.name}'),
+              backgroundColor: AppConstants.successColor,
+            ),
+          );
+        }
+      } else if (result.errorMessage != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('API Error: ${result.errorMessage}'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Product not found in database'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error fetching product: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _mapToAppCategory(String externalCategory) {
+    final category = externalCategory.toLowerCase();
+
+    if (category.contains('snack') ||
+        category.contains('chip') ||
+        category.contains('cookie')) {
+      return 'Snacks';
+    } else if (category.contains('beverage') ||
+        category.contains('drink') ||
+        category.contains('juice')) {
+      return 'Beverages';
+    } else if (category.contains('dairy') ||
+        category.contains('milk') ||
+        category.contains('cheese')) {
+      return 'Dairy';
+    } else if (category.contains('meat') ||
+        category.contains('chicken') ||
+        category.contains('beef')) {
+      return 'Meat';
+    } else if (category.contains('fruit') || category.contains('vegetable')) {
+      return 'Produce';
+    } else if (category.contains('grain') ||
+        category.contains('bread') ||
+        category.contains('pasta')) {
+      return 'Grains';
+    } else if (category.contains('spice') || category.contains('seasoning')) {
+      return 'Spices';
+    } else if (category.contains('condiment') || category.contains('sauce')) {
+      return 'Condiments';
+    }
+
+    return 'Other';
   }
 
   @override
@@ -79,6 +184,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
       setState(() {
         _barcodeController.text = scannedBarcode;
       });
+      // Fetch product details for the scanned barcode
+      _fetchProductDetails(scannedBarcode);
     }
   }
 
@@ -120,6 +227,20 @@ class _AddItemScreenState extends State<AddItemScreen> {
           key: _formKey,
           child: ListView(
             children: [
+              if (_isLoading)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 16),
+                        Text('Fetching product details...'),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_isLoading) const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
