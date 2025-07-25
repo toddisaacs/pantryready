@@ -3,6 +3,7 @@ import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/screens/add_item_screen.dart';
 import 'package:pantryready/screens/barcode_scanner_screen.dart';
+import 'package:pantryready/widgets/item_quantity_dialog.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(PantryItem?) onAddItem;
@@ -338,57 +339,16 @@ class HomeScreen extends StatelessWidget {
                     return;
                   }
 
-                  // Existing item - show quick actions dialog
+                  // Existing item - show enhanced quick actions dialog
                   final PantryItem item = existingItem;
                   if (context.mounted) {
                     showDialog(
                       context: context,
                       builder:
-                          (context) => AlertDialog(
-                            title: Text('Item Found: ${item.name}'),
-                            content: Text(
-                              'Quantity: ${item.quantity} ${item.unit}',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  if (onUpdateItem != null) {
-                                    final updated = item.copyWith(
-                                      quantity: item.quantity + 1,
-                                      updatedAt: DateTime.now(),
-                                    );
-                                    onUpdateItem!(updated);
-                                  }
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('+1'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  if (onUpdateItem != null) {
-                                    final updated = item.copyWith(
-                                      quantity: (item.quantity - 1).clamp(
-                                        0,
-                                        double.infinity,
-                                      ),
-                                      updatedAt: DateTime.now(),
-                                    );
-                                    onUpdateItem!(updated);
-                                  }
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('-1'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  if (onEditItem != null) {
-                                    onEditItem!(item);
-                                  }
-                                },
-                                child: const Text('Edit'),
-                              ),
-                            ],
+                          (context) => ItemQuantityDialog(
+                            item: item,
+                            onUpdateItem: onUpdateItem,
+                            onEditItem: onEditItem,
                           ),
                     );
                   }

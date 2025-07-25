@@ -11,6 +11,7 @@ import 'package:pantryready/screens/settings_screen.dart';
 import 'package:pantryready/screens/environment_settings_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/constants/app_constants.dart';
+import 'package:pantryready/widgets/item_quantity_dialog.dart';
 import 'package:pantryready/services/data_service.dart';
 import 'package:pantryready/services/data_service_factory.dart';
 import 'package:pantryready/config/environment_config.dart';
@@ -334,45 +335,10 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
                             showDialog(
                               context: fabContext,
                               builder:
-                                  (context) => AlertDialog(
-                                    title: Text('Item Found: ${item.name}'),
-                                    content: Text(
-                                      'Quantity: ${item.quantity} ${item.unit}',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          final updated = item.copyWith(
-                                            quantity: item.quantity + 1,
-                                            updatedAt: DateTime.now(),
-                                          );
-                                          _updatePantryItem(updated);
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('+1'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          final updated = item.copyWith(
-                                            quantity: (item.quantity - 1).clamp(
-                                              0,
-                                              double.infinity,
-                                            ),
-                                            updatedAt: DateTime.now(),
-                                          );
-                                          _updatePantryItem(updated);
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('-1'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          _editPantryItem(item);
-                                        },
-                                        child: const Text('Edit'),
-                                      ),
-                                    ],
+                                  (context) => ItemQuantityDialog(
+                                    item: item,
+                                    onUpdateItem: _updatePantryItem,
+                                    onEditItem: _editPantryItem,
                                   ),
                             );
                           }
