@@ -236,6 +236,8 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
               ),
               pantryItems: _pantryItems,
               onAddItem: _addPantryItem,
+              onUpdateItem: _updatePantryItem,
+              onEditItem: _editPantryItem,
               useFirestore: EnvironmentConfig.useFirestore,
               onTestFirestore: _testFirestoreConnection,
             ),

@@ -17,7 +17,14 @@ void main() {
   ) async {
     // Test the HomeScreen directly instead of the full app to avoid Firebase issues
     await tester.pumpWidget(
-      MaterialApp(home: HomeScreen(pantryItems: [], onAddItem: (item) {})),
+      MaterialApp(
+        home: HomeScreen(
+          pantryItems: [],
+          onAddItem: (item) {},
+          onUpdateItem: (item) {},
+          onEditItem: (item) {},
+        ),
+      ),
     );
 
     // Verify the welcome message is shown on the Home screen.

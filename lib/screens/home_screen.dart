@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/screens/add_item_screen.dart';
+import 'package:pantryready/screens/barcode_scanner_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(PantryItem?) onAddItem;
   final List<PantryItem> pantryItems;
   final bool useFirestore;
   final VoidCallback? onTestFirestore;
+  final Function(PantryItem)? onUpdateItem;
+  final Function(PantryItem)? onEditItem;
 
   const HomeScreen({
     super.key,
@@ -15,6 +18,8 @@ class HomeScreen extends StatelessWidget {
     required this.pantryItems,
     this.useFirestore = false,
     this.onTestFirestore,
+    this.onUpdateItem,
+    this.onEditItem,
   });
 
   static const Widget _spacer = SizedBox(height: 24);
@@ -294,13 +299,99 @@ class HomeScreen extends StatelessWidget {
                 'Scan Barcode',
                 Icons.qr_code_scanner,
                 AppConstants.accentColor,
-                () {
-                  // TODO: Navigate to barcode scanner
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Barcode scanner coming soon!'),
+                () async {
+                  // Scan barcode first
+                  final String? scannedBarcode = await Navigator.push<String>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BarcodeScannerScreen(),
                     ),
                   );
+                  if (scannedBarcode == null || scannedBarcode.isEmpty) {
+                    return;
+                  }
+
+                  // Check if item already exists
+                  PantryItem? existingItem;
+                  for (final item in pantryItems) {
+                    if (item.barcode == scannedBarcode) {
+                      existingItem = item;
+                      break;
+                    }
+                  }
+
+                  if (existingItem == null) {
+                    // New item - navigate to add item screen
+                    final PantryItem? newItem =
+                        await Navigator.push<PantryItem>(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => AddItemScreen(
+                                  initialBarcode: scannedBarcode,
+                                ),
+                          ),
+                        );
+                    if (newItem != null) {
+                      onAddItem(newItem);
+                    }
+                    return;
+                  }
+
+                  // Existing item - show quick actions dialog
+                  final PantryItem item = existingItem;
+                  if (context.mounted) {
+                    showDialog(
+                      context: context,
+                      builder:
+                          (context) => AlertDialog(
+                            title: Text('Item Found: ${item.name}'),
+                            content: Text(
+                              'Quantity: ${item.quantity} ${item.unit}',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  if (onUpdateItem != null) {
+                                    final updated = item.copyWith(
+                                      quantity: item.quantity + 1,
+                                      updatedAt: DateTime.now(),
+                                    );
+                                    onUpdateItem!(updated);
+                                  }
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text('+1'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  if (onUpdateItem != null) {
+                                    final updated = item.copyWith(
+                                      quantity: (item.quantity - 1).clamp(
+                                        0,
+                                        double.infinity,
+                                      ),
+                                      updatedAt: DateTime.now(),
+                                    );
+                                    onUpdateItem!(updated);
+                                  }
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text('-1'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  if (onEditItem != null) {
+                                    onEditItem!(item);
+                                  }
+                                },
+                                child: const Text('Edit'),
+                              ),
+                            ],
+                          ),
+                    );
+                  }
                 },
               ),
             ),
