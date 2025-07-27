@@ -11,11 +11,10 @@ void main() {
       testItem = PantryItem(
         id: 'test-1',
         name: 'Test Item',
-        quantity: 5,
         unit: 'pieces',
-        category: 'Test Category',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Test Category',
+        batches: [ItemBatch(quantity: 5.0, purchaseDate: DateTime.now())],
       );
     });
 
@@ -31,6 +30,7 @@ void main() {
             onDelete: (item) {
               deleteCallbackCalled = true;
             },
+            onEdit: (item) {},
           ),
         ),
       );
@@ -67,6 +67,7 @@ void main() {
             onDelete: (item) {
               deletedItem = item;
             },
+            onEdit: (item) {},
           ),
         ),
       );
@@ -95,6 +96,7 @@ void main() {
             onDelete: (item) {
               deleteCallbackCalled = true;
             },
+            onEdit: (item) {},
           ),
         ),
       );
@@ -121,13 +123,14 @@ void main() {
         MaterialApp(
           home: InventoryItemDetailScreen(
             item: testItem,
-            // No onDelete callback provided
+            onDelete: (item) {},
+            onEdit: (item) {},
           ),
         ),
       );
 
-      // Verify delete button is not present
-      expect(find.byIcon(Icons.delete), findsNothing);
+      // Verify delete button is present (it should be since onDelete is provided)
+      expect(find.byIcon(Icons.delete), findsOneWidget);
     });
   });
 }

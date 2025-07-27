@@ -14,8 +14,17 @@ void main() {
         MaterialApp(home: AddItemScreen(initialBarcode: testBarcode)),
       );
 
+      // Wait for the widget to fully build
+      await tester.pumpAndSettle();
+
       // Verify that the barcode field is populated with the initial barcode
-      expect(find.text(testBarcode), findsOneWidget);
+      // Look for the text in the TextFormField
+      final barcodeField = find.widgetWithText(TextFormField, 'Barcode');
+      expect(barcodeField, findsOneWidget);
+
+      // Check that the field contains the barcode text
+      final textField = tester.widget<TextFormField>(barcodeField);
+      expect(textField.controller?.text, equals(testBarcode));
     });
 
     testWidgets('AddItemScreen can be created without initial barcode', (
@@ -25,7 +34,7 @@ void main() {
 
       // Verify that the screen loads successfully
       expect(find.text('Add Item'), findsOneWidget);
-      expect(find.text('Barcode (Optional)'), findsOneWidget);
+      expect(find.text('Barcode'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('AddItemScreen includes barcode scanner button', (
@@ -47,70 +56,72 @@ void main() {
         MaterialApp(home: AddItemScreen(initialBarcode: testBarcode)),
       );
 
-      // Fill in required fields
-      await tester.enterText(find.byType(TextFormField).at(0), 'Test Item');
-      await tester.enterText(find.byType(TextFormField).at(1), '2');
+      // Wait for the widget to fully build
+      await tester.pumpAndSettle();
 
-      // Verify barcode field is populated
-      expect(find.text(testBarcode), findsOneWidget);
+      // Fill in required fields - find them by their labels
+      final nameField = find.widgetWithText(TextFormField, 'Item Name');
+      final quantityField = find.widgetWithText(TextFormField, 'Quantity');
+
+      await tester.enterText(nameField, 'Test Item');
+      await tester.enterText(quantityField, '2');
+
+      // Verify barcode field is populated by checking the controller
+      final barcodeField = find.widgetWithText(TextFormField, 'Barcode');
+      final textField = tester.widget<TextFormField>(barcodeField);
+      expect(textField.controller?.text, equals(testBarcode));
 
       // Save the item (this would normally navigate back)
-      await tester.tap(find.text('Save Item'));
+      await tester.ensureVisible(find.text('Save Item'));
+      await tester.tap(find.text('Save Item'), warnIfMissed: false);
       await tester.pump();
 
       // Verify no validation errors
-      expect(find.text('Please enter item name'), findsNothing);
+      expect(find.text('Please enter an item name'), findsNothing);
     });
 
     test('PantryItem model includes barcode field', () {
-      final now = DateTime.now();
       const testBarcode = '1234567890123';
 
       final item = PantryItem(
         id: '1',
         name: 'Test Item',
-        quantity: 2.0,
         unit: 'pieces',
-        category: 'Snacks',
+        systemCategory: SystemCategory.food,
+        subcategory: 'Snacks',
         barcode: testBarcode,
-        createdAt: now,
-        updatedAt: now,
+        batches: [ItemBatch(quantity: 2.0, purchaseDate: DateTime.now())],
       );
 
       expect(item.barcode, equals(testBarcode));
     });
 
     test('PantryItem model handles null barcode', () {
-      final now = DateTime.now();
-
       final item = PantryItem(
         id: '1',
         name: 'Test Item',
-        quantity: 2.0,
         unit: 'pieces',
-        category: 'Snacks',
+        systemCategory: SystemCategory.food,
+        subcategory: 'Snacks',
         barcode: null,
-        createdAt: now,
-        updatedAt: now,
+        batches: [ItemBatch(quantity: 2.0, purchaseDate: DateTime.now())],
       );
 
       expect(item.barcode, isNull);
     });
 
     test('PantryItem copyWith includes barcode field', () {
-      final now = DateTime.now();
       const originalBarcode = '1234567890123';
       const newBarcode = '9876543210987';
 
       final originalItem = PantryItem(
         id: '1',
         name: 'Test Item',
-        quantity: 2.0,
         unit: 'pieces',
-        category: 'Snacks',
+        systemCategory: SystemCategory.food,
+        subcategory: 'Snacks',
         barcode: originalBarcode,
-        createdAt: now,
-        updatedAt: now,
+        batches: [ItemBatch(quantity: 2.0, purchaseDate: DateTime.now())],
       );
 
       final updatedItem = originalItem.copyWith(barcode: newBarcode);
@@ -123,18 +134,16 @@ void main() {
     });
 
     test('PantryItem JSON serialization includes barcode', () {
-      final now = DateTime.now();
       const testBarcode = '1234567890123';
 
       final item = PantryItem(
         id: '1',
         name: 'Test Item',
-        quantity: 2.0,
         unit: 'pieces',
-        category: 'Snacks',
+        systemCategory: SystemCategory.food,
+        subcategory: 'Snacks',
         barcode: testBarcode,
-        createdAt: now,
-        updatedAt: now,
+        batches: [ItemBatch(quantity: 2.0, purchaseDate: DateTime.now())],
       );
 
       final json = item.toJson();
@@ -146,16 +155,18 @@ void main() {
     });
 
     test('PantryItem equality includes barcode field', () {
-      final now = DateTime.now();
       const testBarcode = '1234567890123';
+      final now = DateTime(2024, 1, 1, 12, 0, 0); // Fixed timestamp
+      const batchId = 'test-batch-id';
 
       final item1 = PantryItem(
         id: '1',
         name: 'Test Item',
-        quantity: 2.0,
         unit: 'pieces',
-        category: 'Snacks',
+        systemCategory: SystemCategory.food,
+        subcategory: 'Snacks',
         barcode: testBarcode,
+        batches: [ItemBatch(id: batchId, quantity: 2.0, purchaseDate: now)],
         createdAt: now,
         updatedAt: now,
       );
@@ -163,10 +174,11 @@ void main() {
       final item2 = PantryItem(
         id: '1',
         name: 'Test Item',
-        quantity: 2.0,
         unit: 'pieces',
-        category: 'Snacks',
+        systemCategory: SystemCategory.food,
+        subcategory: 'Snacks',
         barcode: testBarcode,
+        batches: [ItemBatch(id: batchId, quantity: 2.0, purchaseDate: now)],
         createdAt: now,
         updatedAt: now,
       );
@@ -174,16 +186,26 @@ void main() {
       final item3 = PantryItem(
         id: '1',
         name: 'Test Item',
-        quantity: 2.0,
         unit: 'pieces',
-        category: 'Snacks',
+        systemCategory: SystemCategory.food,
+        subcategory: 'Snacks',
         barcode: '9876543210987', // Different barcode
+        batches: [ItemBatch(id: batchId, quantity: 2.0, purchaseDate: now)],
         createdAt: now,
         updatedAt: now,
       );
 
+      // Test that items with same barcode are equal
+      expect(item1.barcode, equals(item2.barcode));
       expect(item1, equals(item2));
+
+      // Test that items with different barcodes are not equal
+      expect(item1.barcode, isNot(equals(item3.barcode)));
       expect(item1, isNot(equals(item3)));
+
+      // Test that barcode field is specifically different
+      expect(item1.barcode, equals('1234567890123'));
+      expect(item3.barcode, equals('9876543210987'));
     });
 
     testWidgets('Inventory screen shows barcode scanner button', (

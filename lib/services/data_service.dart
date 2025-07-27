@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/services/firestore_service.dart';
 
@@ -15,15 +16,25 @@ abstract class DataService {
 
 class LocalDataService implements DataService {
   final List<PantryItem> _items = [];
+  late final StreamController<List<PantryItem>> _itemsController;
+
+  LocalDataService() {
+    _itemsController = StreamController<List<PantryItem>>.broadcast(
+      onListen: () {
+        _itemsController.add(List<PantryItem>.from(_items));
+      },
+    );
+  }
 
   @override
-  Stream<List<PantryItem>> getPantryItems() async* {
-    yield _items;
+  Stream<List<PantryItem>> getPantryItems() {
+    return _itemsController.stream;
   }
 
   @override
   Future<void> addPantryItem(PantryItem item) async {
     _items.add(item);
+    _notifyListeners();
   }
 
   @override
@@ -31,12 +42,14 @@ class LocalDataService implements DataService {
     final index = _items.indexWhere((i) => i.id == item.id);
     if (index != -1) {
       _items[index] = item;
+      _notifyListeners();
     }
   }
 
   @override
   Future<void> deletePantryItem(String itemId) async {
     _items.removeWhere((item) => item.id == itemId);
+    _notifyListeners();
   }
 
   @override
@@ -53,7 +66,12 @@ class LocalDataService implements DataService {
     final filtered =
         _items
             .where(
-              (item) => item.name.toLowerCase().contains(query.toLowerCase()),
+              (item) =>
+                  item.name.toLowerCase().contains(query.toLowerCase()) ||
+                  (item.subcategory?.toLowerCase().contains(
+                        query.toLowerCase(),
+                      ) ??
+                      false),
             )
             .toList();
     yield filtered;
@@ -61,31 +79,93 @@ class LocalDataService implements DataService {
 
   @override
   Stream<List<PantryItem>> getPantryItemsByCategory(String category) async* {
-    final filtered = _items.where((item) => item.category == category).toList();
-    yield filtered;
-  }
-
-  @override
-  Stream<List<PantryItem>> getLowStockItems() async* {
-    final filtered = _items.where((item) => item.quantity <= 1.0).toList();
-    yield filtered;
-  }
-
-  @override
-  Stream<List<PantryItem>> getExpiringItems() async* {
-    final now = DateTime.now();
-    final weekFromNow = now.add(const Duration(days: 7));
+    // Convert legacy category names to system categories
+    SystemCategory? systemCategory;
+    switch (category.toLowerCase()) {
+      case 'canned goods':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'grains':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'beverages':
+        systemCategory = SystemCategory.water;
+        break;
+      case 'condiments':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'snacks':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'frozen foods':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'dairy':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'produce':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'meat':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'water':
+        systemCategory = SystemCategory.water;
+        break;
+      case 'medical':
+        systemCategory = SystemCategory.medical;
+        break;
+      case 'hygiene':
+        systemCategory = SystemCategory.hygiene;
+        break;
+      case 'tools':
+        systemCategory = SystemCategory.tools;
+        break;
+      case 'lighting':
+        systemCategory = SystemCategory.lighting;
+        break;
+      case 'shelter':
+        systemCategory = SystemCategory.shelter;
+        break;
+      case 'communication':
+        systemCategory = SystemCategory.communication;
+        break;
+      case 'security':
+        systemCategory = SystemCategory.security;
+        break;
+      default:
+        systemCategory = SystemCategory.other;
+    }
 
     final filtered =
         _items
             .where(
               (item) =>
-                  item.expiryDate != null &&
-                  item.expiryDate!.isAfter(now) &&
-                  item.expiryDate!.isBefore(weekFromNow),
+                  item.systemCategory == systemCategory ||
+                  item.subcategory?.toLowerCase() == category.toLowerCase(),
             )
             .toList();
     yield filtered;
+  }
+
+  @override
+  Stream<List<PantryItem>> getLowStockItems() async* {
+    final filtered = _items.where((item) => item.isLowStock).toList();
+    yield filtered;
+  }
+
+  @override
+  Stream<List<PantryItem>> getExpiringItems() async* {
+    final filtered = _items.where((item) => item.hasExpiringItems).toList();
+    yield filtered;
+  }
+
+  void _notifyListeners() {
+    _itemsController.add(List.from(_items));
+  }
+
+  void dispose() {
+    _itemsController.close();
   }
 }
 
@@ -118,22 +198,109 @@ class FirestoreDataService implements DataService {
   }
 
   @override
-  Stream<List<PantryItem>> searchPantryItems(String query) {
-    return _firestoreService.searchPantryItems(query);
+  Stream<List<PantryItem>> searchPantryItems(String query) async* {
+    await for (final items in _firestoreService.getPantryItems()) {
+      final filtered =
+          items
+              .where(
+                (item) =>
+                    item.name.toLowerCase().contains(query.toLowerCase()) ||
+                    (item.subcategory?.toLowerCase().contains(
+                          query.toLowerCase(),
+                        ) ??
+                        false),
+              )
+              .toList();
+      yield filtered;
+    }
   }
 
   @override
-  Stream<List<PantryItem>> getPantryItemsByCategory(String category) {
-    return _firestoreService.getPantryItemsByCategory(category);
+  Stream<List<PantryItem>> getPantryItemsByCategory(String category) async* {
+    // Convert legacy category names to system categories
+    SystemCategory? systemCategory;
+    switch (category.toLowerCase()) {
+      case 'canned goods':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'grains':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'beverages':
+        systemCategory = SystemCategory.water;
+        break;
+      case 'condiments':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'snacks':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'frozen foods':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'dairy':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'produce':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'meat':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'water':
+        systemCategory = SystemCategory.water;
+        break;
+      case 'medical':
+        systemCategory = SystemCategory.medical;
+        break;
+      case 'hygiene':
+        systemCategory = SystemCategory.hygiene;
+        break;
+      case 'tools':
+        systemCategory = SystemCategory.tools;
+        break;
+      case 'lighting':
+        systemCategory = SystemCategory.lighting;
+        break;
+      case 'shelter':
+        systemCategory = SystemCategory.shelter;
+        break;
+      case 'communication':
+        systemCategory = SystemCategory.communication;
+        break;
+      case 'security':
+        systemCategory = SystemCategory.security;
+        break;
+      default:
+        systemCategory = SystemCategory.other;
+    }
+
+    await for (final items in _firestoreService.getPantryItems()) {
+      final filtered =
+          items
+              .where(
+                (item) =>
+                    item.systemCategory == systemCategory ||
+                    item.subcategory?.toLowerCase() == category.toLowerCase(),
+              )
+              .toList();
+      yield filtered;
+    }
   }
 
   @override
-  Stream<List<PantryItem>> getLowStockItems() {
-    return _firestoreService.getLowStockItems();
+  Stream<List<PantryItem>> getLowStockItems() async* {
+    await for (final items in _firestoreService.getPantryItems()) {
+      final filtered = items.where((item) => item.isLowStock).toList();
+      yield filtered;
+    }
   }
 
   @override
-  Stream<List<PantryItem>> getExpiringItems() {
-    return _firestoreService.getExpiringItems();
+  Stream<List<PantryItem>> getExpiringItems() async* {
+    await for (final items in _firestoreService.getPantryItems()) {
+      final filtered = items.where((item) => item.hasExpiringItems).toList();
+      yield filtered;
+    }
   }
 }

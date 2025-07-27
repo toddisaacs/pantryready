@@ -1,13 +1,22 @@
 import 'dart:async';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/services/data_service.dart';
+import 'package:flutter/foundation.dart'; // Added for debugPrint
 
 class MockDataService implements DataService {
   final List<PantryItem> _items = [];
-  final StreamController<List<PantryItem>> _itemsController =
-      StreamController<List<PantryItem>>.broadcast();
+  late final StreamController<List<PantryItem>> _itemsController;
 
   MockDataService() {
+    debugPrint('MockDataService: Initializing with sample data');
+    _itemsController = StreamController<List<PantryItem>>.broadcast(
+      onListen: () {
+        debugPrint(
+          'MockDataService: New listener attached, emitting ${_items.length} items',
+        );
+        _itemsController.add(List<PantryItem>.from(_items));
+      },
+    );
     _seedData();
   }
 
@@ -17,139 +26,228 @@ class MockDataService implements DataService {
       PantryItem(
         id: 'mock-1',
         name: 'Canned Beans',
-        quantity: 12.0,
         unit: 'cans',
-        category: 'Canned Goods',
-        expiryDate: now.add(const Duration(days: 365)),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Canned Goods',
+        batches: [
+          ItemBatch(
+            quantity: 12.0,
+            purchaseDate: now.subtract(const Duration(days: 5)),
+            expiryDate: now.add(const Duration(days: 365)),
+            costPerUnit: 1.25,
+            notes: 'Black beans for tacos',
+          ),
+        ],
         notes: 'Black beans for tacos',
         barcode: '1234567890123',
-        createdAt: now.subtract(const Duration(days: 5)),
-        updatedAt: now.subtract(const Duration(days: 2)),
+        dailyConsumptionRate: 0.5,
+        minStockLevel: 6.0,
+        maxStockLevel: 24.0,
+        isEssential: true,
+        applicableScenarios: [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+        ],
       ),
       PantryItem(
         id: 'mock-2',
         name: 'Rice',
-        quantity: 5.0,
         unit: 'lbs',
-        category: 'Grains',
-        expiryDate: now.add(const Duration(days: 730)),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Grains',
+        batches: [
+          ItemBatch(
+            quantity: 5.0,
+            purchaseDate: now.subtract(const Duration(days: 10)),
+            expiryDate: now.add(const Duration(days: 730)),
+            costPerUnit: 0.80,
+            notes: 'Long grain white rice',
+          ),
+        ],
         notes: 'Long grain white rice',
         barcode: '2345678901234',
-        createdAt: now.subtract(const Duration(days: 10)),
-        updatedAt: now.subtract(const Duration(days: 1)),
+        dailyConsumptionRate: 0.25,
+        minStockLevel: 3.5,
+        maxStockLevel: 15.0,
+        isEssential: true,
+        applicableScenarios: [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.isolation,
+        ],
       ),
       PantryItem(
         id: 'mock-3',
         name: 'Bottled Water',
-        quantity: 24.0,
-        unit: 'bottles',
-        category: 'Beverages',
-        expiryDate: now.add(const Duration(days: 1095)),
+        unit: 'liters',
+        systemCategory: SystemCategory.water,
+        subcategory: 'Drinking Water',
+        batches: [
+          ItemBatch(
+            quantity: 24.0,
+            purchaseDate: now.subtract(const Duration(days: 3)),
+            expiryDate: now.add(const Duration(days: 1095)),
+            costPerUnit: 0.50,
+            notes: 'Spring water',
+          ),
+        ],
         notes: 'Spring water',
         barcode: '3456789012345',
-        createdAt: now.subtract(const Duration(days: 3)),
-        updatedAt: now.subtract(const Duration(hours: 12)),
+        dailyConsumptionRate: 3.0,
+        minStockLevel: 30.0,
+        maxStockLevel: 100.0,
+        isEssential: true,
+        applicableScenarios: [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.isolation,
+        ],
       ),
       PantryItem(
         id: 'mock-4',
         name: 'Pasta',
-        quantity: 8.0,
         unit: 'boxes',
-        category: 'Grains',
-        expiryDate: now.add(const Duration(days: 365)),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Grains',
+        batches: [
+          ItemBatch(
+            quantity: 8.0,
+            purchaseDate: now.subtract(const Duration(days: 7)),
+            expiryDate: now.add(const Duration(days: 365)),
+            costPerUnit: 1.50,
+            notes: 'Spaghetti',
+          ),
+        ],
         notes: 'Spaghetti',
         barcode: '4567890123456',
-        createdAt: now.subtract(const Duration(days: 7)),
-        updatedAt: now.subtract(const Duration(days: 3)),
+        dailyConsumptionRate: 0.3,
+        minStockLevel: 4.2,
+        maxStockLevel: 12.0,
+        isEssential: false,
+        applicableScenarios: [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+        ],
       ),
       PantryItem(
         id: 'mock-5',
         name: 'Peanut Butter',
-        quantity: 3.0,
         unit: 'jars',
-        category: 'Condiments',
-        expiryDate: now.add(const Duration(days: 180)),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Condiments',
+        batches: [
+          ItemBatch(
+            quantity: 3.0,
+            purchaseDate: now.subtract(const Duration(days: 15)),
+            expiryDate: now.add(const Duration(days: 180)),
+            costPerUnit: 2.50,
+            notes: 'Natural peanut butter',
+          ),
+        ],
         notes: 'Natural peanut butter',
         barcode: '5678901234567',
-        createdAt: now.subtract(const Duration(days: 15)),
-        updatedAt: now.subtract(const Duration(days: 5)),
+        dailyConsumptionRate: 0.1,
+        minStockLevel: 2.0,
+        maxStockLevel: 6.0,
+        isEssential: false,
+        applicableScenarios: [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+        ],
       ),
       PantryItem(
         id: 'mock-6',
         name: 'Pinto Beans',
-        quantity: 2.0,
         unit: 'lbs',
-        category: 'Grains',
-        expiryDate: now.add(const Duration(days: 365)),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Grains',
+        batches: [
+          ItemBatch(
+            quantity: 2.0,
+            purchaseDate: now.subtract(const Duration(days: 20)),
+            expiryDate: now.add(const Duration(days: 365)),
+            costPerUnit: 1.20,
+            notes: 'Dried pinto beans',
+          ),
+        ],
         notes: 'Dried pinto beans',
         barcode: '6789012345678',
-        createdAt: now.subtract(const Duration(days: 20)),
-        updatedAt: now.subtract(const Duration(days: 10)),
+        dailyConsumptionRate: 0.2,
+        minStockLevel: 2.8,
+        maxStockLevel: 8.0,
+        isEssential: true,
+        applicableScenarios: [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.isolation,
+        ],
       ),
       PantryItem(
         id: 'mock-7',
         name: 'Canned Tomatoes',
-        quantity: 6.0,
         unit: 'cans',
-        category: 'Canned Goods',
-        expiryDate: now.add(const Duration(days: 730)),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Canned Goods',
+        batches: [
+          ItemBatch(
+            quantity: 6.0,
+            purchaseDate: now.subtract(const Duration(days: 8)),
+            expiryDate: now.add(const Duration(days: 730)),
+            costPerUnit: 1.00,
+            notes: 'Crushed tomatoes for cooking',
+          ),
+        ],
         notes: 'Crushed tomatoes for cooking',
         barcode: '7890123456789',
-        createdAt: now.subtract(const Duration(days: 8)),
-        updatedAt: now.subtract(const Duration(days: 4)),
+        dailyConsumptionRate: 0.3,
+        minStockLevel: 4.2,
+        maxStockLevel: 12.0,
+        isEssential: false,
+        applicableScenarios: [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+        ],
       ),
       PantryItem(
         id: 'mock-8',
         name: 'Olive Oil',
-        quantity: 1.0,
         unit: 'bottles',
-        category: 'Condiments',
-        expiryDate: now.add(const Duration(days: 365)),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Condiments',
+        batches: [
+          ItemBatch(
+            quantity: 1.0,
+            purchaseDate: now.subtract(const Duration(days: 12)),
+            expiryDate: now.add(const Duration(days: 365)),
+            costPerUnit: 8.00,
+            notes: 'Extra virgin olive oil',
+          ),
+        ],
         notes: 'Extra virgin olive oil',
         barcode: '8901234567890',
-        createdAt: now.subtract(const Duration(days: 30)),
-        updatedAt: now.subtract(const Duration(days: 15)),
-      ),
-      PantryItem(
-        id: 'mock-9',
-        name: 'Frozen Vegetables',
-        quantity: 4.0,
-        unit: 'bags',
-        category: 'Frozen Foods',
-        expiryDate: now.add(const Duration(days: 180)),
-        notes: 'Mixed vegetables',
-        barcode: '9012345678901',
-        createdAt: now.subtract(const Duration(days: 12)),
-        updatedAt: now.subtract(const Duration(days: 6)),
-      ),
-      PantryItem(
-        id: 'mock-10',
-        name: 'Cereal',
-        quantity: 2.0,
-        unit: 'boxes',
-        category: 'Grains',
-        expiryDate: now.add(const Duration(days: 90)),
-        notes: 'Whole grain cereal',
-        barcode: '0123456789012',
-        createdAt: now.subtract(const Duration(days: 25)),
-        updatedAt: now.subtract(const Duration(days: 12)),
+        dailyConsumptionRate: 0.05,
+        minStockLevel: 0.7,
+        maxStockLevel: 2.0,
+        isEssential: false,
+        applicableScenarios: [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+        ],
       ),
     ];
 
+    debugPrint(
+      'MockDataService: Seeding data with ${sampleItems.length} items',
+    );
     _items.addAll(sampleItems);
-    // Don't notify listeners here - wait until stream is accessed
-  }
-
-  void _notifyListeners() {
-    _itemsController.add(_items);
+    _notifyListeners();
   }
 
   @override
   Stream<List<PantryItem>> getPantryItems() {
-    // Emit initial data after a short delay to ensure listener is set up
-    Future.delayed(const Duration(milliseconds: 10), () {
-      _itemsController.add(_items);
-    });
     return _itemsController.stream;
   }
 
@@ -190,7 +288,10 @@ class MockDataService implements DataService {
             .where(
               (item) =>
                   item.name.toLowerCase().contains(query.toLowerCase()) ||
-                  item.category.toLowerCase().contains(query.toLowerCase()) ||
+                  (item.subcategory?.toLowerCase().contains(
+                        query.toLowerCase(),
+                      ) ??
+                      false) ||
                   (item.notes?.toLowerCase().contains(query.toLowerCase()) ??
                       false),
             )
@@ -200,50 +301,135 @@ class MockDataService implements DataService {
 
   @override
   Stream<List<PantryItem>> getPantryItemsByCategory(String category) async* {
-    final filtered = _items.where((item) => item.category == category).toList();
-    yield filtered;
-  }
-
-  @override
-  Stream<List<PantryItem>> getLowStockItems() async* {
-    final filtered = _items.where((item) => item.quantity <= 1.0).toList();
-    yield filtered;
-  }
-
-  @override
-  Stream<List<PantryItem>> getExpiringItems() async* {
-    final now = DateTime.now();
-    final weekFromNow = now.add(const Duration(days: 7));
+    // Convert legacy category names to system categories
+    SystemCategory? systemCategory;
+    switch (category.toLowerCase()) {
+      case 'canned goods':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'grains':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'beverages':
+        systemCategory = SystemCategory.water;
+        break;
+      case 'condiments':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'snacks':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'frozen foods':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'dairy':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'produce':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'meat':
+        systemCategory = SystemCategory.food;
+        break;
+      case 'water':
+        systemCategory = SystemCategory.water;
+        break;
+      case 'medical':
+        systemCategory = SystemCategory.medical;
+        break;
+      case 'hygiene':
+        systemCategory = SystemCategory.hygiene;
+        break;
+      case 'tools':
+        systemCategory = SystemCategory.tools;
+        break;
+      case 'lighting':
+        systemCategory = SystemCategory.lighting;
+        break;
+      case 'shelter':
+        systemCategory = SystemCategory.shelter;
+        break;
+      case 'communication':
+        systemCategory = SystemCategory.communication;
+        break;
+      case 'security':
+        systemCategory = SystemCategory.security;
+        break;
+      default:
+        systemCategory = SystemCategory.other;
+    }
 
     final filtered =
         _items
             .where(
               (item) =>
-                  item.expiryDate != null &&
-                  item.expiryDate!.isAfter(now) &&
-                  item.expiryDate!.isBefore(weekFromNow),
+                  item.systemCategory == systemCategory ||
+                  item.subcategory?.toLowerCase() == category.toLowerCase(),
             )
             .toList();
     yield filtered;
   }
 
-  // Additional methods for mock data management
-  void resetToSeedData() {
-    _items.clear();
-    _seedData();
+  @override
+  Stream<List<PantryItem>> getLowStockItems() async* {
+    final filtered = _items.where((item) => item.isLowStock).toList();
+    yield filtered;
   }
 
-  void addMockItem(PantryItem item) {
-    _items.add(item);
-    _notifyListeners();
+  @override
+  Stream<List<PantryItem>> getExpiringItems() async* {
+    final filtered = _items.where((item) => item.hasExpiringItems).toList();
+    yield filtered;
   }
 
-  void clearAllItems() {
-    _items.clear();
-    _notifyListeners();
+  void _notifyListeners() {
+    debugPrint(
+      'MockDataService: Notifying listeners with ${_items.length} items',
+    );
+    _itemsController.add(List.from(_items));
   }
 
   void dispose() {
     _itemsController.close();
+  }
+
+  // Helper methods for testing and debugging
+  List<PantryItem> getItemsByCategory(SystemCategory category) {
+    return _items.where((item) => item.systemCategory == category).toList();
+  }
+
+  List<PantryItem> getItemsBySubcategory(String subcategory) {
+    return _items.where((item) => item.subcategory == subcategory).toList();
+  }
+
+  List<PantryItem> getEssentialItems() {
+    return _items.where((item) => item.isEssential).toList();
+  }
+
+  List<PantryItem> getExcessiveStockItems() {
+    return _items.where((item) => item.isExcessiveStock).toList();
+  }
+
+  List<PantryItem> getItemsForScenario(SurvivalScenario scenario) {
+    return _items
+        .where((item) => item.applicableScenarios.contains(scenario))
+        .toList();
+  }
+
+  double getTotalDaysOfSupply(SystemCategory category, int familySize) {
+    final categoryItems = getItemsByCategory(category);
+    double totalDays = 0.0;
+    int itemCount = 0;
+
+    for (final item in categoryItems) {
+      if (item.dailyConsumptionRate != null && item.dailyConsumptionRate! > 0) {
+        final days =
+            item.availableQuantity / (item.dailyConsumptionRate! * familySize);
+        totalDays += days;
+        itemCount++;
+      }
+    }
+
+    return itemCount > 0 ? totalDays / itemCount : 0.0;
   }
 }

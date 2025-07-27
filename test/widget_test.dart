@@ -39,29 +39,26 @@ void main() {
       PantryItem(
         id: '1',
         name: 'Bottled Water',
-        quantity: 6.0,
         unit: 'bottles',
-        category: 'Beverages',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        systemCategory: SystemCategory.water,
+        subcategory: 'Beverages',
+        batches: [ItemBatch(quantity: 6.0, purchaseDate: DateTime.now())],
       ),
       PantryItem(
         id: '2',
         name: 'Canned Beans',
-        quantity: 2.0,
         unit: 'cans',
-        category: 'Canned Goods',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Canned Goods',
+        batches: [ItemBatch(quantity: 2.0, purchaseDate: DateTime.now())],
       ),
       PantryItem(
         id: '3',
         name: 'Rice',
-        quantity: 1.0,
         unit: 'bags',
-        category: 'Grains',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Grains',
+        batches: [ItemBatch(quantity: 1.0, purchaseDate: DateTime.now())],
       ),
     ];
 
@@ -78,11 +75,10 @@ void main() {
     );
 
     // Check for the categories and items
-    expect(find.text('Beverages'), findsWidgets);
+    expect(find.text('Water'), findsWidgets);
     expect(find.text('Bottled Water'), findsOneWidget);
-    expect(find.text('Canned Goods'), findsWidgets);
+    expect(find.text('Food'), findsWidgets);
     expect(find.text('Canned Beans'), findsOneWidget);
-    expect(find.text('Grains'), findsWidgets);
     expect(find.text('Rice'), findsOneWidget);
   });
 
@@ -93,11 +89,10 @@ void main() {
       PantryItem(
         id: '1',
         name: 'Bottled Water',
-        quantity: 6.0,
         unit: 'bottles',
-        category: 'Beverages',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        systemCategory: SystemCategory.water,
+        subcategory: 'Beverages',
+        batches: [ItemBatch(quantity: 6.0, purchaseDate: DateTime.now())],
       ),
     ];
 
@@ -155,11 +150,10 @@ void main() {
       PantryItem(
         id: '1',
         name: 'Canned Beans',
-        quantity: 2.0,
         unit: 'cans',
-        category: 'Canned Goods',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        systemCategory: SystemCategory.food,
+        subcategory: 'Canned Goods',
+        batches: [ItemBatch(quantity: 2.0, purchaseDate: DateTime.now())],
       ),
     ];
 

@@ -4,13 +4,13 @@ import 'package:pantryready/models/pantry_item.dart';
 
 class ItemQuantityDialog extends StatefulWidget {
   final PantryItem item;
-  final Function(PantryItem)? onUpdateItem;
+  final Function(PantryItem) onUpdateItem;
   final Function(PantryItem)? onEditItem;
 
   const ItemQuantityDialog({
     super.key,
     required this.item,
-    this.onUpdateItem,
+    required this.onUpdateItem,
     this.onEditItem,
   });
 
@@ -19,14 +19,15 @@ class ItemQuantityDialog extends StatefulWidget {
 }
 
 class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
-  late double _addQuantity;
-  late TextEditingController _quantityController;
+  final TextEditingController _quantityController = TextEditingController();
+  String _selectedUnit = '';
+  bool _isAddMode = true;
 
   @override
   void initState() {
     super.initState();
-    _addQuantity = 1.0; // Default to adding 1 item
-    _quantityController = TextEditingController(text: _addQuantity.toString());
+    _selectedUnit = widget.item.unit;
+    _quantityController.text = '1';
   }
 
   @override
@@ -35,83 +36,99 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
     super.dispose();
   }
 
-  void _updateAddQuantity(double newQuantity) {
-    setState(() {
-      _addQuantity = newQuantity.clamp(0, double.infinity);
-      _quantityController.text = _addQuantity.toString();
-    });
-  }
-
-  void _applyChanges() {
-    if (widget.onUpdateItem != null && _addQuantity > 0) {
-      final updated = widget.item.copyWith(
-        quantity: widget.item.quantity + _addQuantity,
-        updatedAt: DateTime.now(),
-      );
-      widget.onUpdateItem!(updated);
-    }
-    Navigator.of(context).pop();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final newTotal = widget.item.quantity + _addQuantity;
     return AlertDialog(
-      title: Text('Item Found: ${widget.item.name}'),
+      title: Text('${_isAddMode ? 'Add' : 'Remove'} ${widget.item.name}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Current Stock: ${widget.item.quantity} ${widget.item.unit}',
+            'Current quantity: ${widget.item.totalQuantity.toStringAsFixed(1)} ${widget.item.unit}',
             style: const TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              IconButton(
-                onPressed: () => _updateAddQuantity(_addQuantity - 1),
-                icon: const Icon(Icons.remove_circle_outline, size: 32),
-                color: Colors.red,
-              ),
-              SizedBox(
-                width: 80,
-                child: TextField(
+              Expanded(
+                child: TextFormField(
                   controller: _quantityController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
                   decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 12,
-                    ),
+                    labelText: 'Quantity',
+                    hintText: 'Enter quantity',
                   ),
-                  onChanged: (value) {
-                    final newQuantity = double.tryParse(value) ?? _addQuantity;
-                    _updateAddQuantity(newQuantity);
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a quantity';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    final quantity = double.parse(value);
+                    if (quantity <= 0) {
+                      return 'Quantity must be greater than 0';
+                    }
+                    if (!_isAddMode &&
+                        quantity > widget.item.availableQuantity) {
+                      return 'Cannot remove more than available quantity';
+                    }
+                    return null;
                   },
                 ),
               ),
-              IconButton(
-                onPressed: () => _updateAddQuantity(_addQuantity + 1),
-                icon: const Icon(Icons.add_circle_outline, size: 32),
-                color: AppConstants.successColor,
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _selectedUnit,
+                  decoration: const InputDecoration(labelText: 'Unit'),
+                  items:
+                      AppConstants.units.map((unit) {
+                        return DropdownMenuItem(value: unit, child: Text(unit));
+                      }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedUnit = value!;
+                    });
+                  },
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Add ${_addQuantity.toStringAsFixed(_addQuantity.truncateToDouble() == _addQuantity ? 0 : 1)} for total of ${newTotal.toStringAsFixed(newTotal.truncateToDouble() == newTotal ? 0 : 1)} ${widget.item.unit}',
-            style: TextStyle(
-              fontSize: 14,
-              color:
-                  _addQuantity > 0
-                      ? AppConstants.primaryColor
-                      : AppConstants.textSecondaryColor,
-              fontWeight:
-                  _addQuantity > 0 ? FontWeight.bold : FontWeight.normal,
-            ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _isAddMode = true;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        _isAddMode ? AppConstants.primaryColor : Colors.grey,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Add'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _isAddMode = false;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: !_isAddMode ? Colors.red : Colors.grey,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Remove'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -120,20 +137,54 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            if (widget.onEditItem != null) {
-              widget.onEditItem!(widget.item);
-            }
-          },
-          child: const Text('Edit'),
-        ),
         ElevatedButton(
-          onPressed: _addQuantity > 0 ? _applyChanges : null,
-          child: const Text('Add'),
+          onPressed: _updateQuantity,
+          style: ElevatedButton.styleFrom(
+            backgroundColor:
+                _isAddMode ? AppConstants.primaryColor : Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: Text(_isAddMode ? 'Add' : 'Remove'),
         ),
       ],
+    );
+  }
+
+  void _updateQuantity() {
+    if (_quantityController.text.isEmpty) {
+      return;
+    }
+
+    final quantity = double.parse(_quantityController.text);
+    PantryItem updatedItem;
+
+    if (_isAddMode) {
+      // Add a new batch
+      final newBatch = ItemBatch(
+        quantity: quantity,
+        purchaseDate: DateTime.now(),
+        costPerUnit: null,
+        notes: 'Added via quick dialog',
+      );
+      updatedItem = widget.item.addBatch(newBatch);
+    } else {
+      // Remove from available quantity
+      updatedItem = widget.item.consumeQuantity(quantity);
+    }
+
+    widget.onUpdateItem(updatedItem);
+    Navigator.of(context).pop();
+
+    // Show confirmation message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isAddMode
+              ? 'Added ${quantity.toStringAsFixed(1)} $_selectedUnit of ${widget.item.name}'
+              : 'Removed ${quantity.toStringAsFixed(1)} $_selectedUnit of ${widget.item.name}',
+        ),
+        backgroundColor: _isAddMode ? AppConstants.successColor : Colors.orange,
+      ),
     );
   }
 }

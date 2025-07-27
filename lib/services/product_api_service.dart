@@ -1,132 +1,213 @@
 import 'package:pantryready/models/pantry_item.dart';
+import 'package:pantryready/models/product_api_result.dart';
 
-/// Result of a product lookup operation
-class ProductLookupResult {
-  final bool found;
-  final String? name;
-  final String? category;
-  final String? brand;
-  final String? imageUrl;
-  final String? ingredients;
-  final Map<String, dynamic>? nutritionFacts;
-  final String? errorMessage;
-
-  const ProductLookupResult({
-    required this.found,
-    this.name,
-    this.category,
-    this.brand,
-    this.imageUrl,
-    this.ingredients,
-    this.nutritionFacts,
-    this.errorMessage,
-  });
-
-  /// Creates a successful result with product data
-  factory ProductLookupResult.success({
-    required String name,
-    String? category,
-    String? brand,
-    String? imageUrl,
-    String? ingredients,
-    Map<String, dynamic>? nutritionFacts,
-  }) {
-    return ProductLookupResult(
-      found: true,
-      name: name,
-      category: category,
-      brand: brand,
-      imageUrl: imageUrl,
-      ingredients: ingredients,
-      nutritionFacts: nutritionFacts,
-    );
-  }
-
-  /// Creates a result for when product is not found
-  factory ProductLookupResult.notFound() {
-    return const ProductLookupResult(found: false);
-  }
-
-  /// Creates a result for when an error occurred
-  factory ProductLookupResult.error(String message) {
-    return ProductLookupResult(found: false, errorMessage: message);
-  }
-
-  /// Converts the API result to a PantryItem with default values
-  PantryItem toPantryItem({
-    required String barcode,
-    double quantity = 1.0,
-    String unit = 'pieces',
-    String? notes,
-  }) {
-    final now = DateTime.now();
-    return PantryItem(
-      id: now.millisecondsSinceEpoch.toString(),
-      name: name ?? 'Unknown Product',
-      quantity: quantity,
-      unit: unit,
-      category: _mapToAppCategory(category),
-      barcode: barcode,
-      notes: notes,
-      createdAt: now,
-      updatedAt: now,
-    );
-  }
-
-  /// Maps external API categories to our app categories
-  String _mapToAppCategory(String? externalCategory) {
-    if (externalCategory == null) return 'Other';
-
-    final category = externalCategory.toLowerCase();
-
-    // Map common Open Food Facts categories to our app categories
-    if (category.contains('snack') ||
-        category.contains('chip') ||
-        category.contains('cookie')) {
-      return 'Snacks';
-    } else if (category.contains('beverage') ||
-        category.contains('drink') ||
-        category.contains('juice')) {
-      return 'Beverages';
-    } else if (category.contains('dairy') ||
-        category.contains('milk') ||
-        category.contains('cheese')) {
-      return 'Dairy';
-    } else if (category.contains('meat') ||
-        category.contains('chicken') ||
-        category.contains('beef')) {
-      return 'Meat';
-    } else if (category.contains('fruit') ||
-        category.contains('vegetable') ||
-        category.contains('produce')) {
-      return 'Produce';
-    } else if (category.contains('grain') ||
-        category.contains('bread') ||
-        category.contains('cereal')) {
-      return 'Grains';
-    } else if (category.contains('condiment') ||
-        category.contains('sauce') ||
-        category.contains('spice')) {
-      return 'Condiments';
-    } else if (category.contains('frozen')) {
-      return 'Frozen Foods';
-    } else if (category.contains('canned') || category.contains('preserved')) {
-      return 'Canned Goods';
-    }
-
-    return 'Other';
-  }
+abstract class ProductApiService {
+  Future<ProductApiResult> lookupProduct(String barcode);
 }
 
-/// Abstract interface for product API services
-abstract class ProductApiService {
-  /// Looks up product information by barcode
-  /// Returns a [ProductLookupResult] with product data or error information
-  Future<ProductLookupResult> lookupProduct(String barcode);
+class MockProductApiService implements ProductApiService {
+  @override
+  Future<ProductApiResult> lookupProduct(String barcode) async {
+    // Simulate API delay
+    await Future.delayed(const Duration(milliseconds: 500));
 
-  /// Gets the service name for identification
-  String get serviceName;
+    // Mock data based on barcode
+    switch (barcode) {
+      case '1234567890123':
+        return ProductApiResult(
+          found: true,
+          name: 'Canned Beans',
+          brand: 'Generic Brand',
+          category: 'Canned Goods',
+          barcode: barcode,
+        );
+      case '2345678901234':
+        return ProductApiResult(
+          found: true,
+          name: 'Rice',
+          brand: 'Generic Brand',
+          category: 'Grains',
+          barcode: barcode,
+        );
+      case '3456789012345':
+        return ProductApiResult(
+          found: true,
+          name: 'Bottled Water',
+          brand: 'Generic Brand',
+          category: 'Beverages',
+          barcode: barcode,
+        );
+      case '4567890123456':
+        return ProductApiResult(
+          found: true,
+          name: 'Pasta',
+          brand: 'Generic Brand',
+          category: 'Grains',
+          barcode: barcode,
+        );
+      case '5678901234567':
+        return ProductApiResult(
+          found: true,
+          name: 'Peanut Butter',
+          brand: 'Generic Brand',
+          category: 'Condiments',
+          barcode: barcode,
+        );
+      case '6789012345678':
+        return ProductApiResult(
+          found: true,
+          name: 'Pinto Beans',
+          brand: 'Generic Brand',
+          category: 'Grains',
+          barcode: barcode,
+        );
+      case '7890123456789':
+        return ProductApiResult(
+          found: true,
+          name: 'Canned Tomatoes',
+          brand: 'Generic Brand',
+          category: 'Canned Goods',
+          barcode: barcode,
+        );
+      case '8901234567890':
+        return ProductApiResult(
+          found: true,
+          name: 'Olive Oil',
+          brand: 'Generic Brand',
+          category: 'Condiments',
+          barcode: barcode,
+        );
+      default:
+        return ProductApiResult(
+          found: false,
+          errorMessage: 'Product not found',
+          barcode: barcode,
+        );
+    }
+  }
 
-  /// Checks if the service is available/configured
-  Future<bool> isAvailable();
+  // Helper method to create a PantryItem from API result
+  PantryItem createPantryItemFromApiResult(ProductApiResult result) {
+    // Map external category to system category
+    SystemCategory systemCategory = _mapToSystemCategory(result.category ?? '');
+
+    // Create initial batch
+    final initialBatch = ItemBatch(
+      quantity: 1.0,
+      purchaseDate: DateTime.now(),
+      costPerUnit: null,
+      notes: 'Added via barcode scan',
+    );
+
+    return PantryItem(
+      name: result.name ?? 'Unknown Product',
+      unit: 'units',
+      systemCategory: systemCategory,
+      subcategory: result.category,
+      batches: [initialBatch],
+      barcode: result.barcode,
+      notes: result.brand != null ? 'Brand: ${result.brand}' : null,
+      // Set reasonable defaults for survival/preparedness fields
+      dailyConsumptionRate: _getDefaultConsumptionRate(systemCategory),
+      minStockLevel: 1.0,
+      maxStockLevel: 10.0,
+      isEssential:
+          systemCategory == SystemCategory.water ||
+          systemCategory == SystemCategory.medical,
+      applicableScenarios: _getDefaultScenarios(systemCategory),
+    );
+  }
+
+  SystemCategory _mapToSystemCategory(String externalCategory) {
+    final category = externalCategory.toLowerCase();
+
+    if (category.contains('water') ||
+        category.contains('beverage') ||
+        category.contains('drink')) {
+      return SystemCategory.water;
+    } else if (category.contains('medical') || category.contains('health')) {
+      return SystemCategory.medical;
+    } else if (category.contains('hygiene') || category.contains('cleaning')) {
+      return SystemCategory.hygiene;
+    } else if (category.contains('tool') || category.contains('equipment')) {
+      return SystemCategory.tools;
+    } else if (category.contains('light') || category.contains('power')) {
+      return SystemCategory.lighting;
+    } else if (category.contains('shelter') || category.contains('home')) {
+      return SystemCategory.shelter;
+    } else if (category.contains('communication') ||
+        category.contains('phone')) {
+      return SystemCategory.communication;
+    } else if (category.contains('security') || category.contains('safety')) {
+      return SystemCategory.security;
+    }
+
+    // Default to food for most items
+    return SystemCategory.food;
+  }
+
+  double? _getDefaultConsumptionRate(SystemCategory category) {
+    switch (category) {
+      case SystemCategory.water:
+        return 3.0; // 3 liters per person per day
+      case SystemCategory.food:
+        return 2.0; // 2 lbs per person per day
+      case SystemCategory.medical:
+        return 0.01; // Very low consumption
+      case SystemCategory.hygiene:
+        return 0.5; // 0.5 units per person per day
+      default:
+        return null; // No default consumption rate
+    }
+  }
+
+  List<SurvivalScenario> _getDefaultScenarios(SystemCategory category) {
+    switch (category) {
+      case SystemCategory.water:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.isolation,
+        ];
+      case SystemCategory.food:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.isolation,
+        ];
+      case SystemCategory.medical:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.earthquake,
+          SurvivalScenario.pandemic,
+        ];
+      case SystemCategory.hygiene:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.pandemic,
+        ];
+      case SystemCategory.tools:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.earthquake,
+        ];
+      case SystemCategory.lighting:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.earthquake,
+        ];
+      default:
+        return [SurvivalScenario.powerOutage];
+    }
+  }
 }

@@ -35,8 +35,15 @@ void main() async {
       'ENVIRONMENT',
       defaultValue: '',
     );
+    const String useEmptyData = String.fromEnvironment(
+      'USE_EMPTY_DATA',
+      defaultValue: 'false',
+    );
+
     if (buildEnv.isNotEmpty) {
       EnvironmentConfig.configureFromBuildArgs();
+    } else if (useEmptyData.toLowerCase() == 'true') {
+      EnvironmentConfig.configureForLocalDevelopmentWithEmptyData();
     } else {
       EnvironmentConfig.configureForLocalDevelopment();
     }
@@ -98,9 +105,11 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
 
   // Load data from the current data service
   void _loadDataFromService() {
+    debugPrint('Loading data from service: ${_dataService.runtimeType}');
     _dataSubscription?.cancel();
     _dataSubscription = _dataService.getPantryItems().listen(
       (items) {
+        debugPrint('Received ${items.length} items from data service');
         setState(() {
           _pantryItems.clear();
           _pantryItems.addAll(items);
@@ -139,7 +148,10 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
 
     final PantryItem? updatedItem = await Navigator.push<PantryItem>(
       context,
-      MaterialPageRoute(builder: (context) => EditItemScreen(item: item)),
+      MaterialPageRoute(
+        builder:
+            (context) => EditItemScreen(item: item, onSave: _updatePantryItem),
+      ),
     );
     if (mounted && updatedItem != null) {
       _updatePantryItem(updatedItem);
@@ -197,6 +209,7 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
         primarySwatch: Colors.green,
         primaryColor: AppConstants.primaryColor,
         scaffoldBackgroundColor: AppConstants.backgroundColor,
+        fontFamily: 'Roboto', // Use Roboto as fallback font
         appBarTheme: AppBarTheme(
           backgroundColor: AppConstants.primaryColor,
           foregroundColor: Colors.white,
@@ -313,7 +326,7 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
                             }
                           }
                           if (existingItem == null) {
-                            if (mounted) {
+                            if (fabContext.mounted) {
                               final PantryItem? newItem =
                                   await Navigator.push<PantryItem>(
                                     fabContext,
@@ -324,14 +337,14 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
                                           ),
                                     ),
                                   );
-                              if (mounted) {
+                              if (fabContext.mounted && newItem != null) {
                                 _addPantryItem(newItem);
                               }
                             }
                             return;
                           }
                           final PantryItem item = existingItem;
-                          if (mounted) {
+                          if (fabContext.mounted) {
                             showDialog(
                               context: fabContext,
                               builder:

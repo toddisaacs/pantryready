@@ -23,7 +23,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _barcodeController = TextEditingController();
 
   String _selectedUnit = AppConstants.units.first;
-  String _selectedCategory = AppConstants.categories.first;
+  SystemCategory _selectedSystemCategory = SystemCategory.food;
+  String? _selectedSubcategory;
   DateTime? _selectedExpiryDate;
   bool _isLoading = false;
   late ProductApiService _apiService;
@@ -44,11 +45,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (widget.suggestedItem != null) {
       final item = widget.suggestedItem!;
       _nameController.text = item.name;
-      _quantityController.text = item.quantity.toString();
+      _quantityController.text = item.totalQuantity.toString();
       _notesController.text = item.notes ?? '';
       _selectedUnit = item.unit;
-      _selectedCategory = item.category;
-      _selectedExpiryDate = item.expiryDate;
+      _selectedSystemCategory = item.systemCategory;
+      _selectedSubcategory = item.subcategory;
+      // Note: We don't set expiry date from suggested item as it's now per batch
     }
   }
 
@@ -66,7 +68,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
         setState(() {
           _nameController.text = result.name!;
           if (result.category != null) {
-            _selectedCategory = _mapToAppCategory(result.category!);
+            _selectedSystemCategory = _mapToSystemCategory(result.category!);
           }
           if (result.brand != null && result.brand!.isNotEmpty) {
             _notesController.text = 'Brand: ${result.brand}';
@@ -116,38 +118,32 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
-  String _mapToAppCategory(String externalCategory) {
+  SystemCategory _mapToSystemCategory(String externalCategory) {
     final category = externalCategory.toLowerCase();
 
-    if (category.contains('snack') ||
-        category.contains('chip') ||
-        category.contains('cookie')) {
-      return 'Snacks';
-    } else if (category.contains('beverage') ||
-        category.contains('drink') ||
-        category.contains('juice')) {
-      return 'Beverages';
-    } else if (category.contains('dairy') ||
-        category.contains('milk') ||
-        category.contains('cheese')) {
-      return 'Dairy';
-    } else if (category.contains('meat') ||
-        category.contains('chicken') ||
-        category.contains('beef')) {
-      return 'Meat';
-    } else if (category.contains('fruit') || category.contains('vegetable')) {
-      return 'Produce';
-    } else if (category.contains('grain') ||
-        category.contains('bread') ||
-        category.contains('pasta')) {
-      return 'Grains';
-    } else if (category.contains('spice') || category.contains('seasoning')) {
-      return 'Spices';
-    } else if (category.contains('condiment') || category.contains('sauce')) {
-      return 'Condiments';
+    if (category.contains('water') ||
+        category.contains('beverage') ||
+        category.contains('drink')) {
+      return SystemCategory.water;
+    } else if (category.contains('medical') || category.contains('health')) {
+      return SystemCategory.medical;
+    } else if (category.contains('hygiene') || category.contains('cleaning')) {
+      return SystemCategory.hygiene;
+    } else if (category.contains('tool') || category.contains('equipment')) {
+      return SystemCategory.tools;
+    } else if (category.contains('light') || category.contains('power')) {
+      return SystemCategory.lighting;
+    } else if (category.contains('shelter') || category.contains('home')) {
+      return SystemCategory.shelter;
+    } else if (category.contains('communication') ||
+        category.contains('phone')) {
+      return SystemCategory.communication;
+    } else if (category.contains('security') || category.contains('safety')) {
+      return SystemCategory.security;
     }
 
-    return 'Other';
+    // Default to food for most items
+    return SystemCategory.food;
   }
 
   @override
@@ -159,60 +155,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     super.dispose();
   }
 
-  Future<void> _pickExpiryDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: now,
-      firstDate: now,
-      lastDate: DateTime(now.year + 10),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedExpiryDate = picked;
-      });
-    }
-  }
-
-  Future<void> _scanBarcode() async {
-    final String? scannedBarcode = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
-    );
-
-    if (scannedBarcode != null && scannedBarcode.isNotEmpty) {
-      setState(() {
-        _barcodeController.text = scannedBarcode;
-      });
-      // Fetch product details for the scanned barcode
-      _fetchProductDetails(scannedBarcode);
-    }
-  }
-
-  void _saveItem() {
-    if (_formKey.currentState!.validate()) {
-      final item = PantryItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _nameController.text.trim(),
-        quantity: double.tryParse(_quantityController.text.trim()) ?? 1.0,
-        unit: _selectedUnit,
-        category: _selectedCategory,
-        expiryDate: _selectedExpiryDate,
-        notes:
-            _notesController.text.trim().isEmpty
-                ? null
-                : _notesController.text.trim(),
-        barcode:
-            _barcodeController.text.trim().isEmpty
-                ? null
-                : _barcodeController.text.trim(),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      Navigator.of(context).pop(item);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -221,188 +163,496 @@ class _AddItemScreenState extends State<AddItemScreen> {
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildBarcodeSection(),
+                      const SizedBox(height: 16),
+                      _buildBasicInfoSection(),
+                      const SizedBox(height: 16),
+                      _buildCategorySection(),
+                      const SizedBox(height: 16),
+                      _buildQuantitySection(),
+                      const SizedBox(height: 16),
+                      _buildExpirySection(),
+                      const SizedBox(height: 16),
+                      _buildNotesSection(),
+                      const SizedBox(height: 24),
+                      _buildActionButtons(),
+                    ],
+                  ),
+                ),
+              ),
+    );
+  }
+
+  Widget _buildBarcodeSection() {
+    return Card(
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              if (_isLoading)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(width: 16),
-                        Text('Fetching product details...'),
-                      ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Barcode',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _barcodeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Barcode',
+                      hintText: 'Enter or scan barcode',
                     ),
                   ),
                 ),
-              if (_isLoading) const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Item Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator:
-                    (value) =>
-                        value == null || value.trim().isEmpty
-                            ? 'Enter a name'
-                            : null,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _quantityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Quantity',
-                        border: OutlineInputBorder(),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () async {
+                    final barcode = await Navigator.push<String>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BarcodeScannerScreen(),
                       ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter quantity';
-                        }
-                        final n = int.tryParse(value.trim());
-                        if (n == null || n < 1) {
-                          return 'Enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedUnit,
-                      decoration: const InputDecoration(
-                        labelText: 'Unit',
-                        border: OutlineInputBorder(),
-                      ),
-                      items:
-                          AppConstants.units
-                              .map(
-                                (unit) => DropdownMenuItem(
-                                  value: unit,
-                                  child: Text(unit),
-                                ),
-                              )
-                              .toList(),
-                      onChanged: (String? value) {
-                        if (value != null) {
-                          setState(() {
-                            _selectedUnit = value;
-                          });
-                        }
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please select a unit';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
+                    );
+                    if (barcode != null) {
+                      setState(() {
+                        _barcodeController.text = barcode;
+                      });
+                      _fetchProductDetails(barcode);
+                    }
+                  },
+                  icon: const Icon(Icons.qr_code_scanner),
+                  tooltip: 'Scan Barcode',
                 ),
-                items:
-                    AppConstants.categories
-                        .map(
-                          (category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          ),
-                        )
-                        .toList(),
-                onChanged: (String? value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedCategory = value;
-                    });
-                  }
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select a category';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Expiry Date'),
-                subtitle: Text(
-                  _selectedExpiryDate == null
-                      ? 'Not set'
-                      : '${_selectedExpiryDate!.month}/${_selectedExpiryDate!.day}/${_selectedExpiryDate!.year}',
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.calendar_today),
-                  onPressed: _pickExpiryDate,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              // Barcode field
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _barcodeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Barcode (Optional)',
-                        border: OutlineInputBorder(),
-                        hintText: 'Scan or enter barcode',
-                        prefixIcon: Icon(Icons.qr_code),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _scanBarcode,
-                    icon: const Icon(Icons.qr_code_scanner),
-                    tooltip: 'Scan Barcode',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saveItem,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppConstants.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text('Save Item'),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildBasicInfoSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Basic Information',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Item Name',
+                hintText: 'Enter item name',
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter an item name';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategorySection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Category',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<SystemCategory>(
+              value: _selectedSystemCategory,
+              decoration: const InputDecoration(labelText: 'System Category'),
+              items:
+                  SystemCategory.values.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Row(
+                        children: [
+                          Text(category.emoji),
+                          const SizedBox(width: 8),
+                          Text(category.displayName),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedSystemCategory = value!;
+                  _selectedSubcategory =
+                      null; // Reset subcategory when category changes
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _selectedSubcategory,
+              decoration: const InputDecoration(
+                labelText: 'Subcategory (Optional)',
+              ),
+              items:
+                  _getSubcategoriesForCategory(_selectedSystemCategory).map((
+                    subcategory,
+                  ) {
+                    return DropdownMenuItem(
+                      value: subcategory,
+                      child: Text(subcategory),
+                    );
+                  }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedSubcategory = value;
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<String> _getSubcategoriesForCategory(SystemCategory category) {
+    switch (category) {
+      case SystemCategory.food:
+        return [
+          'Canned Goods',
+          'Grains',
+          'Condiments',
+          'Snacks',
+          'Frozen Foods',
+          'Dairy',
+          'Produce',
+          'Meat',
+        ];
+      case SystemCategory.water:
+        return ['Drinking Water', 'Purified Water', 'Spring Water'];
+      case SystemCategory.medical:
+        return ['First Aid', 'Medications', 'Supplies'];
+      case SystemCategory.hygiene:
+        return ['Personal Care', 'Cleaning', 'Sanitation'];
+      case SystemCategory.tools:
+        return ['Hand Tools', 'Power Tools', 'Equipment'];
+      case SystemCategory.lighting:
+        return ['Flashlights', 'Batteries', 'Candles'];
+      case SystemCategory.shelter:
+        return ['Tents', 'Tarps', 'Sleeping Bags'];
+      case SystemCategory.communication:
+        return ['Radios', 'Phones', 'Chargers'];
+      case SystemCategory.security:
+        return ['Locks', 'Alarms', 'Safes'];
+      case SystemCategory.other:
+        return ['Miscellaneous'];
+    }
+  }
+
+  Widget _buildQuantitySection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Quantity',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _quantityController,
+                    decoration: const InputDecoration(
+                      labelText: 'Quantity',
+                      hintText: 'Enter quantity',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a quantity';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedUnit,
+                    decoration: const InputDecoration(labelText: 'Unit'),
+                    items:
+                        AppConstants.units.map((unit) {
+                          return DropdownMenuItem(
+                            value: unit,
+                            child: Text(unit),
+                          );
+                        }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedUnit = value!;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpirySection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Expiry Date',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Expiry Date',
+                      hintText:
+                          _selectedExpiryDate == null
+                              ? 'Select date'
+                              : _formatDate(_selectedExpiryDate!),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.calendar_today),
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 3650),
+                            ),
+                          );
+                          if (date != null) {
+                            setState(() {
+                              _selectedExpiryDate = date;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedExpiryDate = null;
+                    });
+                  },
+                  child: const Text('Clear'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Notes',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                hintText: 'Add any additional notes',
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: _saveItem,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: const Text('Save Item'),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: const Text('Cancel'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _saveItem() {
+    if (_formKey.currentState!.validate()) {
+      final quantity = double.parse(_quantityController.text);
+
+      // Create initial batch
+      final initialBatch = ItemBatch(
+        quantity: quantity,
+        purchaseDate: DateTime.now(),
+        expiryDate: _selectedExpiryDate,
+        costPerUnit: null,
+        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+      );
+
+      // Create the new PantryItem
+      final newItem = PantryItem(
+        name: _nameController.text,
+        unit: _selectedUnit,
+        systemCategory: _selectedSystemCategory,
+        subcategory: _selectedSubcategory,
+        batches: [initialBatch],
+        barcode:
+            _barcodeController.text.isNotEmpty ? _barcodeController.text : null,
+        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        // Set reasonable defaults for survival/preparedness fields
+        dailyConsumptionRate: _getDefaultConsumptionRate(
+          _selectedSystemCategory,
+        ),
+        minStockLevel: quantity * 0.5, // 50% of current quantity
+        maxStockLevel: quantity * 3.0, // 3x current quantity
+        isEssential:
+            _selectedSystemCategory == SystemCategory.water ||
+            _selectedSystemCategory == SystemCategory.medical,
+        applicableScenarios: _getDefaultScenarios(_selectedSystemCategory),
+      );
+
+      Navigator.of(context).pop(newItem);
+    }
+  }
+
+  double? _getDefaultConsumptionRate(SystemCategory category) {
+    switch (category) {
+      case SystemCategory.water:
+        return 3.0; // 3 liters per person per day
+      case SystemCategory.food:
+        return 2.0; // 2 lbs per person per day
+      case SystemCategory.medical:
+        return 0.01; // Very low consumption
+      case SystemCategory.hygiene:
+        return 0.5; // 0.5 units per person per day
+      default:
+        return null; // No default consumption rate
+    }
+  }
+
+  List<SurvivalScenario> _getDefaultScenarios(SystemCategory category) {
+    switch (category) {
+      case SystemCategory.water:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.isolation,
+        ];
+      case SystemCategory.food:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.isolation,
+        ];
+      case SystemCategory.medical:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.earthquake,
+          SurvivalScenario.pandemic,
+        ];
+      case SystemCategory.hygiene:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.pandemic,
+        ];
+      case SystemCategory.tools:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.earthquake,
+        ];
+      case SystemCategory.lighting:
+        return [
+          SurvivalScenario.powerOutage,
+          SurvivalScenario.winterStorm,
+          SurvivalScenario.hurricane,
+          SurvivalScenario.earthquake,
+        ];
+      default:
+        return [SurvivalScenario.powerOutage];
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.month}/${date.day}/${date.year}';
   }
 }

@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/models/pantry_item.dart';
 import 'package:pantryready/screens/edit_item_screen.dart';
+import 'package:pantryready/widgets/item_quantity_dialog.dart';
 
 class InventoryItemDetailScreen extends StatelessWidget {
   final PantryItem item;
-  final Function(PantryItem)? onDelete;
-  final Function(PantryItem)? onEdit;
+  final Function(PantryItem) onDelete;
+  final Function(PantryItem) onEdit;
 
   const InventoryItemDetailScreen({
     super.key,
     required this.item,
-    this.onDelete,
-    this.onEdit,
+    required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -23,18 +24,16 @@ class InventoryItemDetailScreen extends StatelessWidget {
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
         actions: [
-          if (onEdit != null)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _handleEdit(context),
-              tooltip: 'Edit Item',
-            ),
-          if (onDelete != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () => _showDeleteConfirmation(context),
-              tooltip: 'Delete Item',
-            ),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _editItem(context),
+            tooltip: 'Edit Item',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () => _deleteItem(context),
+            tooltip: 'Delete Item',
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -43,8 +42,12 @@ class InventoryItemDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildItemHeader(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             _buildItemDetails(),
+            const SizedBox(height: 16),
+            _buildBatchInformation(),
+            const SizedBox(height: 16),
+            _buildSurvivalInformation(),
             const SizedBox(height: 24),
             _buildActionButtons(context),
           ],
@@ -55,20 +58,19 @@ class InventoryItemDetailScreen extends StatelessWidget {
 
   Widget _buildItemHeader() {
     return Card(
-      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
             CircleAvatar(
               radius: 30,
               backgroundColor: _getCategoryColor(
-                item.category,
+                item.systemCategory,
               ).withValues(alpha: 0.1),
               child: Icon(
-                _getCategoryIcon(item.category),
-                size: 32,
-                color: _getCategoryColor(item.category),
+                _getCategoryIcon(item.systemCategory),
+                size: 30,
+                color: _getCategoryColor(item.systemCategory),
               ),
             ),
             const SizedBox(width: 16),
@@ -76,33 +78,43 @@ class InventoryItemDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (item.isEssential)
+                        Icon(Icons.priority_high, color: Colors.red, size: 24),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${item.quantity} ${item.unit}',
+                    '${item.totalQuantity.toStringAsFixed(1)} ${item.unit}',
                     style: TextStyle(
                       fontSize: 18,
                       color: AppConstants.textSecondaryColor,
                     ),
                   ),
-                  if (item.category.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                  if (item.subcategory != null && item.subcategory!.isNotEmpty)
                     Text(
-                      item.category,
+                      item.subcategory!,
                       style: TextStyle(
                         fontSize: 14,
                         color: AppConstants.textSecondaryColor,
                       ),
                     ),
-                  ],
                 ],
               ),
+            ),
+            Text(
+              item.systemCategory.emoji,
+              style: const TextStyle(fontSize: 32),
             ),
           ],
         ),
@@ -112,43 +124,222 @@ class InventoryItemDetailScreen extends StatelessWidget {
 
   Widget _buildItemDetails() {
     return Card(
-      elevation: 1,
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Item Details',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
-            _buildDetailRow('Quantity', '${item.quantity} ${item.unit}'),
-            if (item.category.isNotEmpty)
-              _buildDetailRow('Category', item.category),
-            if (item.expiryDate != null)
+            const SizedBox(height: 12),
+            _buildDetailRow('System Category', item.systemCategory.displayName),
+            if (item.subcategory != null && item.subcategory!.isNotEmpty)
+              _buildDetailRow('Subcategory', item.subcategory!),
+            _buildDetailRow(
+              'Total Quantity',
+              '${item.totalQuantity.toStringAsFixed(1)} ${item.unit}',
+            ),
+            if (item.availableQuantity != item.totalQuantity)
               _buildDetailRow(
-                'Expiry Date',
-                _formatDate(item.expiryDate!),
-                isExpiringSoon: item.expiryDate!.isBefore(
-                  DateTime.now().add(const Duration(days: 30)),
+                'Available Quantity',
+                '${item.availableQuantity.toStringAsFixed(1)} ${item.unit}',
+              ),
+            if (item.daysOfSupply != null)
+              _buildDetailRow(
+                'Days of Supply',
+                '${item.daysOfSupply!.toStringAsFixed(1)} days',
+              ),
+            if (item.dailyConsumptionRate != null)
+              _buildDetailRow(
+                'Daily Consumption',
+                '${item.dailyConsumptionRate!.toStringAsFixed(2)} ${item.unit}/day',
+              ),
+            if (item.minStockLevel != null)
+              _buildDetailRow(
+                'Min Stock Level',
+                '${item.minStockLevel!.toStringAsFixed(1)} ${item.unit}',
+              ),
+            if (item.maxStockLevel != null)
+              _buildDetailRow(
+                'Max Stock Level',
+                '${item.maxStockLevel!.toStringAsFixed(1)} ${item.unit}',
+              ),
+            if (item.storageLocation != null &&
+                item.storageLocation!.isNotEmpty)
+              _buildDetailRow('Storage Location', item.storageLocation!),
+            if (item.barcode != null && item.barcode!.isNotEmpty)
+              _buildDetailRow('Barcode', item.barcode!),
+            if (item.notes != null && item.notes!.isNotEmpty)
+              _buildDetailRow('Notes', item.notes!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBatchInformation() {
+    if (item.batches.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Batch Information',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ...item.sortedBatches.map((batch) => _buildBatchRow(batch)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBatchRow(ItemBatch batch) {
+    final isExpiringSoon =
+        batch.expiryDate != null &&
+        batch.expiryDate!.isBefore(
+          DateTime.now().add(const Duration(days: 30)),
+        );
+    final isExpired =
+        batch.expiryDate != null && batch.expiryDate!.isBefore(DateTime.now());
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color:
+            isExpired
+                ? Colors.red.withValues(alpha: 0.1)
+                : isExpiringSoon
+                ? Colors.orange.withValues(alpha: 0.1)
+                : AppConstants.backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color:
+              isExpired
+                  ? Colors.red
+                  : isExpiringSoon
+                  ? Colors.orange
+                  : Colors.grey.shade300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${batch.quantity.toStringAsFixed(1)} ${item.unit}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-            _buildDetailRow('Added', _formatDate(item.createdAt)),
-            _buildDetailRow('Last Updated', _formatDate(item.updatedAt)),
-            if (item.notes != null && item.notes!.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Notes',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              if (batch.costPerUnit != null)
+                Text(
+                  '\$${(batch.costPerUnit! * batch.quantity).toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: AppConstants.textSecondaryColor,
+                    fontSize: 12,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Purchased: ${_formatDate(batch.purchaseDate)}',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppConstants.textSecondaryColor,
+            ),
+          ),
+          if (batch.expiryDate != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Expires: ${_formatDate(batch.expiryDate!)}',
+              style: TextStyle(
+                fontSize: 12,
+                color:
+                    isExpired
+                        ? Colors.red
+                        : isExpiringSoon
+                        ? Colors.orange
+                        : AppConstants.textSecondaryColor,
+                fontWeight:
+                    isExpired || isExpiringSoon
+                        ? FontWeight.bold
+                        : FontWeight.normal,
               ),
+            ),
+          ],
+          if (batch.notes != null && batch.notes!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              batch.notes!,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppConstants.textSecondaryColor,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSurvivalInformation() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Survival & Preparedness',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            _buildDetailRow('Essential Item', item.isEssential ? 'Yes' : 'No'),
+            if (item.isLowStock)
+              _buildDetailRow('Stock Status', 'Low Stock', Colors.orange),
+            if (item.isExcessiveStock)
+              _buildDetailRow('Stock Status', 'Excessive Stock', Colors.blue),
+            if (item.hasExpiringItems)
+              _buildDetailRow(
+                'Expiry Status',
+                'Has Expiring Items',
+                Colors.red,
+              ),
+            if (item.applicableScenarios.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(
-                item.notes!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppConstants.textSecondaryColor,
-                ),
+              const Text(
+                'Applicable Scenarios:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                children:
+                    item.applicableScenarios.map((scenario) {
+                      return Chip(
+                        label: Text(scenario.displayName),
+                        backgroundColor: AppConstants.primaryColor.withValues(
+                          alpha: 0.1,
+                        ),
+                        labelStyle: TextStyle(
+                          color: AppConstants.primaryColor,
+                          fontSize: 12,
+                        ),
+                      );
+                    }).toList(),
               ),
             ],
           ],
@@ -157,59 +348,24 @@ class InventoryItemDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(
-    String label,
-    String value, {
-    bool isExpiringSoon = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                color: isExpiringSoon ? Colors.red : AppConstants.textColor,
-                fontWeight:
-                    isExpiringSoon ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildActionButtons(BuildContext context) {
-    return Column(
+    return Row(
       children: [
-        SizedBox(
-          width: double.infinity,
+        Expanded(
           child: ElevatedButton.icon(
             onPressed: () {
-              // TODO: Implement increment quantity
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Increment functionality coming soon!'),
-                ),
+              showDialog(
+                context: context,
+                builder:
+                    (context) => ItemQuantityDialog(
+                      item: item,
+                      onUpdateItem: onEdit,
+                      onEditItem: onEdit,
+                    ),
               );
             },
             icon: const Icon(Icons.add),
-            label: const Text('Add Quantity'),
+            label: const Text('Add/Remove'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppConstants.primaryColor,
               foregroundColor: Colors.white,
@@ -217,23 +373,13 @@ class InventoryItemDetailScreen extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
+        const SizedBox(width: 12),
+        Expanded(
           child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Implement decrement quantity
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Decrement functionality coming soon!'),
-                ),
-              );
-            },
-            icon: const Icon(Icons.remove),
-            label: const Text('Use Item'),
+            onPressed: () => _editItem(context),
+            icon: const Icon(Icons.edit),
+            label: const Text('Edit'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppConstants.primaryColor,
-              side: BorderSide(color: AppConstants.primaryColor),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
           ),
@@ -242,105 +388,115 @@ class InventoryItemDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Item'),
-          content: Text('Are you sure you want to delete "${item.name}"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+  Widget _buildDetailRow(String label, String value, [Color? valueColor]) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                if (onDelete != null) {
-                  onDelete!(item);
-                  Navigator.of(context).pop(); // Close detail screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${item.name} deleted successfully'),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Delete functionality not available'),
-                    ),
-                  );
-                }
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(color: valueColor ?? AppConstants.textColor),
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
-  void _handleEdit(BuildContext context) async {
+  void _editItem(BuildContext context) async {
     final PantryItem? updatedItem = await Navigator.of(
       context,
     ).push<PantryItem>(
-      MaterialPageRoute(builder: (context) => EditItemScreen(item: item)),
+      MaterialPageRoute(
+        builder: (context) => EditItemScreen(item: item, onSave: onEdit),
+      ),
     );
-
-    if (updatedItem != null && onEdit != null) {
-      onEdit!(updatedItem);
+    if (updatedItem != null) {
+      onEdit(updatedItem);
     }
   }
 
-  Color _getCategoryColor(String? category) {
+  void _deleteItem(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Item'),
+            content: Text('Are you sure you want to delete "${item.name}"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onDelete(item);
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Color _getCategoryColor(SystemCategory category) {
     switch (category) {
-      case 'Canned Goods':
-        return Colors.orange;
-      case 'Grains':
-        return Colors.amber;
-      case 'Beverages':
+      case SystemCategory.water:
         return Colors.blue;
-      case 'Condiments':
-        return Colors.purple;
-      case 'Snacks':
-        return Colors.pink;
-      case 'Frozen Foods':
-        return Colors.cyan;
-      case 'Dairy':
-        return Colors.white;
-      case 'Produce':
-        return Colors.green;
-      case 'Meat':
+      case SystemCategory.food:
+        return Colors.orange;
+      case SystemCategory.medical:
         return Colors.red;
-      default:
+      case SystemCategory.hygiene:
+        return Colors.purple;
+      case SystemCategory.tools:
+        return Colors.grey;
+      case SystemCategory.lighting:
+        return Colors.yellow;
+      case SystemCategory.shelter:
+        return Colors.brown;
+      case SystemCategory.communication:
+        return Colors.green;
+      case SystemCategory.security:
+        return Colors.black;
+      case SystemCategory.other:
         return AppConstants.primaryColor;
     }
   }
 
-  IconData _getCategoryIcon(String? category) {
+  IconData _getCategoryIcon(SystemCategory category) {
     switch (category) {
-      case 'Canned Goods':
+      case SystemCategory.water:
+        return Icons.water_drop;
+      case SystemCategory.food:
+        return Icons.restaurant;
+      case SystemCategory.medical:
+        return Icons.medical_services;
+      case SystemCategory.hygiene:
+        return Icons.cleaning_services;
+      case SystemCategory.tools:
+        return Icons.build;
+      case SystemCategory.lighting:
+        return Icons.lightbulb;
+      case SystemCategory.shelter:
+        return Icons.home;
+      case SystemCategory.communication:
+        return Icons.phone;
+      case SystemCategory.security:
+        return Icons.security;
+      case SystemCategory.other:
         return Icons.inventory;
-      case 'Grains':
-        return Icons.grain;
-      case 'Beverages':
-        return Icons.local_drink;
-      case 'Condiments':
-        return Icons.kitchen;
-      case 'Snacks':
-        return Icons.cake;
-      case 'Frozen Foods':
-        return Icons.ac_unit;
-      case 'Dairy':
-        return Icons.egg;
-      case 'Produce':
-        return Icons.eco;
-      case 'Meat':
-        return Icons.set_meal;
-      default:
-        return Icons.kitchen;
     }
   }
 

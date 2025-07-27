@@ -51,6 +51,13 @@ class EnvironmentConfig {
     debugPrint('Configured for local development with mock data');
   }
 
+  static void configureForLocalDevelopmentWithEmptyData() {
+    setEnvironment(Environment.local);
+    setDataSource(DataSource.local);
+    setProductionMode(false);
+    debugPrint('Configured for local development with empty local data');
+  }
+
   static void configureForDev() {
     setEnvironment(Environment.dev);
     setDataSource(DataSource.firestore);

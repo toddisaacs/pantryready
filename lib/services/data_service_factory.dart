@@ -50,6 +50,13 @@ class DataServiceFactory {
       'Switching data source from ${EnvironmentConfig.dataSource} to $newDataSource',
     );
 
+    // Dispose of current service before switching
+    if (_currentService is MockDataService) {
+      (_currentService as MockDataService).dispose();
+    } else if (_currentService is LocalDataService) {
+      (_currentService as LocalDataService).dispose();
+    }
+
     EnvironmentConfig.setDataSource(newDataSource);
     _currentService = null; // Force recreation
 
@@ -78,6 +85,13 @@ class DataServiceFactory {
   // Method to configure for specific environment
   static DataService configureForEnvironment(Environment environment) {
     debugPrint('Configuring for environment: $environment');
+
+    // Dispose of current service before configuring
+    if (_currentService is MockDataService) {
+      (_currentService as MockDataService).dispose();
+    } else if (_currentService is LocalDataService) {
+      (_currentService as LocalDataService).dispose();
+    }
 
     switch (environment) {
       case Environment.local:
@@ -110,6 +124,14 @@ class DataServiceFactory {
   // Reset to default configuration
   static DataService resetToDefault() {
     debugPrint('Resetting to default configuration');
+
+    // Dispose of current service before resetting
+    if (_currentService is MockDataService) {
+      (_currentService as MockDataService).dispose();
+    } else if (_currentService is LocalDataService) {
+      (_currentService as LocalDataService).dispose();
+    }
+
     EnvironmentConfig.configureForLocalDevelopment();
     _currentService = null;
     return getDataService();
@@ -119,6 +141,8 @@ class DataServiceFactory {
   static void dispose() {
     if (_currentService is MockDataService) {
       (_currentService as MockDataService).dispose();
+    } else if (_currentService is LocalDataService) {
+      (_currentService as LocalDataService).dispose();
     }
     _currentService = null;
     _firestoreService = null;

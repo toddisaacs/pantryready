@@ -39,7 +39,7 @@ class HomeScreen extends StatelessWidget {
             _spacer,
             _buildQuickStatsSection(),
             _spacer,
-            _buildRecentItemsSection(),
+            _buildRecentItemsSection(context),
             _spacer,
             _buildQuickActionsSection(context),
           ],
@@ -135,17 +135,10 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildQuickStatsSection() {
     final totalItems = pantryItems.length;
-    final lowStockItems = pantryItems.where((item) => item.quantity < 5).length;
+    final lowStockItems = pantryItems.where((item) => item.isLowStock).length;
     final expiringItems =
-        pantryItems
-            .where(
-              (item) =>
-                  item.expiryDate != null &&
-                  item.expiryDate!.isBefore(
-                    DateTime.now().add(const Duration(days: 30)),
-                  ),
-            )
-            .length;
+        pantryItems.where((item) => item.hasExpiringItems).length;
+    final essentialItems = pantryItems.where((item) => item.isEssential).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,6 +173,47 @@ class HomeScreen extends StatelessWidget {
                 'Expiring Soon',
                 expiringItems.toString(),
                 Icons.schedule,
+                Colors.red,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Essential Items',
+                essentialItems.toString(),
+                Icons.priority_high,
+                Colors.red,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Water Items',
+                pantryItems
+                    .where(
+                      (item) => item.systemCategory == SystemCategory.water,
+                    )
+                    .length
+                    .toString(),
+                Icons.water_drop,
+                Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Medical Items',
+                pantryItems
+                    .where(
+                      (item) => item.systemCategory == SystemCategory.medical,
+                    )
+                    .length
+                    .toString(),
+                Icons.medical_services,
                 Colors.red,
               ),
             ),
@@ -225,7 +259,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentItemsSection() {
+  Widget _buildRecentItemsSection(BuildContext context) {
     final recentItems = pantryItems.take(3).toList();
 
     return Column(
@@ -236,31 +270,76 @@ class HomeScreen extends StatelessWidget {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        ...recentItems.map((item) => _buildRecentItemTile(item)),
+        ...recentItems.map((item) => _buildRecentItemTile(item, context)),
       ],
     );
   }
 
-  Widget _buildRecentItemTile(PantryItem item) {
+  Widget _buildRecentItemTile(PantryItem item, BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.1),
-          child: Icon(Icons.kitchen, color: AppConstants.primaryColor),
-        ),
-        title: Text(
-          item.name,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
-        subtitle: Text('${item.quantity} ${item.unit}'),
-        trailing: Text(
-          item.category,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppConstants.textSecondaryColor,
+          child: Icon(
+            _getCategoryIcon(item.systemCategory),
+            color: AppConstants.primaryColor,
           ),
         ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                item.name,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+            if (item.isEssential)
+              Icon(Icons.priority_high, color: Colors.red, size: 16),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${item.totalQuantity.toStringAsFixed(1)} ${item.unit}'),
+            if (item.subcategory != null && item.subcategory!.isNotEmpty)
+              Text(
+                item.subcategory!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppConstants.textSecondaryColor,
+                ),
+              ),
+            if (item.daysOfSupply != null)
+              Text(
+                '${item.daysOfSupply!.toStringAsFixed(1)} days supply',
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      item.daysOfSupply! < 7
+                          ? Colors.red
+                          : AppConstants.textSecondaryColor,
+                ),
+              ),
+          ],
+        ),
+        trailing: Text(
+          item.systemCategory.emoji,
+          style: const TextStyle(fontSize: 20),
+        ),
+        onTap: () {
+          if (onUpdateItem != null) {
+            showDialog(
+              context: context,
+              builder:
+                  (dialogContext) => ItemQuantityDialog(
+                    item: item,
+                    onUpdateItem: onUpdateItem!,
+                    onEditItem: onEditItem,
+                  ),
+            );
+          }
+        },
       ),
     );
   }
@@ -277,82 +356,57 @@ class HomeScreen extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _buildActionCard(
-                context,
-                'Add Item',
-                Icons.add,
-                AppConstants.primaryColor,
-                () async {
+              child: ElevatedButton.icon(
+                onPressed: () async {
                   final newItem = await Navigator.push<PantryItem>(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const AddItemScreen(),
                     ),
                   );
-                  onAddItem(newItem);
+                  if (context.mounted && newItem != null) {
+                    onAddItem(newItem);
+                  }
                 },
+                icon: const Icon(Icons.add),
+                label: const Text('Add Item'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildActionCard(
-                context,
-                'Scan Barcode',
-                Icons.qr_code_scanner,
-                AppConstants.accentColor,
-                () async {
-                  // Scan barcode first
-                  final String? scannedBarcode = await Navigator.push<String>(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final barcode = await Navigator.push<String>(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const BarcodeScannerScreen(),
                     ),
                   );
-                  if (scannedBarcode == null || scannedBarcode.isEmpty) {
-                    return;
-                  }
-
-                  // Check if item already exists
-                  PantryItem? existingItem;
-                  for (final item in pantryItems) {
-                    if (item.barcode == scannedBarcode) {
-                      existingItem = item;
-                      break;
-                    }
-                  }
-
-                  if (existingItem == null) {
-                    // New item - navigate to add item screen
-                    final PantryItem? newItem =
-                        await Navigator.push<PantryItem>(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => AddItemScreen(
-                                  initialBarcode: scannedBarcode,
-                                ),
-                          ),
-                        );
-                    if (newItem != null) {
+                  if (context.mounted && barcode != null) {
+                    final newItem = await Navigator.push<PantryItem>(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => AddItemScreen(initialBarcode: barcode),
+                      ),
+                    );
+                    if (context.mounted && newItem != null) {
                       onAddItem(newItem);
                     }
-                    return;
-                  }
-
-                  // Existing item - show enhanced quick actions dialog
-                  final PantryItem item = existingItem;
-                  if (context.mounted) {
-                    showDialog(
-                      context: context,
-                      builder:
-                          (context) => ItemQuantityDialog(
-                            item: item,
-                            onUpdateItem: onUpdateItem,
-                            onEditItem: onEditItem,
-                          ),
-                    );
                   }
                 },
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Scan Barcode'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
               ),
             ),
           ],
@@ -361,37 +415,28 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      elevation: 1,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 32),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: color,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  IconData _getCategoryIcon(SystemCategory category) {
+    switch (category) {
+      case SystemCategory.water:
+        return Icons.water_drop;
+      case SystemCategory.food:
+        return Icons.restaurant;
+      case SystemCategory.medical:
+        return Icons.medical_services;
+      case SystemCategory.hygiene:
+        return Icons.cleaning_services;
+      case SystemCategory.tools:
+        return Icons.build;
+      case SystemCategory.lighting:
+        return Icons.lightbulb;
+      case SystemCategory.shelter:
+        return Icons.home;
+      case SystemCategory.communication:
+        return Icons.phone;
+      case SystemCategory.security:
+        return Icons.security;
+      case SystemCategory.other:
+        return Icons.inventory;
+    }
   }
 }

@@ -48,10 +48,40 @@ A Flutter app for managing your pantry inventory with barcode scanning and produ
      ```
    - **Never commit your real firebase.json!**
 
-5. **Run the app**
-   ```bash
-   flutter run
-   ```
+### Running the App
+
+The app supports different data configurations for development and testing:
+
+#### 🎭 **Mock Data (Default - Recommended for Development)**
+```bash
+# Run with sample data that resets on every run
+flutter run --debug
+# OR
+./scripts/run_local.sh
+```
+- ✅ **Best for**: Development, manual testing, automated testing
+- ✅ **Benefits**: Consistent sample data, reproducible test scenarios
+- 📝 **Data**: 8 sample pantry items with realistic data
+
+#### 📂 **Empty Local Data**
+```bash
+# Run with empty inventory (starts fresh)
+flutter run --debug --dart-define=USE_EMPTY_DATA=true
+# OR
+./scripts/run_empty.sh
+```
+- ✅ **Best for**: Testing fresh user experience, data entry workflows
+- ✅ **Benefits**: Clean slate, test real user onboarding
+- 📝 **Data**: Empty inventory, add your own items
+
+#### 🧹 **Clean Output (Suppressed Warnings)**
+```bash
+# Run with warnings suppressed for cleaner output
+./scripts/run_clean.sh
+```
+- ✅ **Best for**: Development with minimal console noise
+- ✅ **Benefits**: Suppresses font and lifecycle warnings
+- 📝 **Note**: Warnings are still logged but filtered from output
 
 ## 🏗️ Build & Deployment
 

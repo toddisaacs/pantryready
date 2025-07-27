@@ -27,7 +27,7 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String? _selectedCategory;
+  SystemCategory? _selectedCategory;
 
   List<PantryItem> get _filteredItems {
     List<PantryItem> items = widget.pantryItems;
@@ -40,16 +40,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     item.name.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ) ||
-                    item.category.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
+                    (item.subcategory?.toLowerCase().contains(
+                          _searchQuery.toLowerCase(),
+                        ) ??
+                        false),
               )
               .toList();
     }
 
-    if (_selectedCategory != null && _selectedCategory != 'All') {
+    if (_selectedCategory != null) {
       items =
-          items.where((item) => item.category == _selectedCategory).toList();
+          items
+              .where((item) => item.systemCategory == _selectedCategory)
+              .toList();
     }
 
     return items;
@@ -163,12 +166,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
             child: Row(
               children: [
                 _buildCategoryChip('All', null),
-                const SizedBox(width: 8),
-                ...AppConstants.categories.map(
-                  (category) => Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: _buildCategoryChip(category, category),
-                  ),
+                ...SystemCategory.values.map(
+                  (category) =>
+                      _buildCategoryChip(category.displayName, category),
                 ),
               ],
             ),
@@ -178,60 +178,52 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Widget _buildCategoryChip(String label, String? category) {
+  Widget _buildCategoryChip(String label, SystemCategory? category) {
     final isSelected = _selectedCategory == category;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _selectedCategory = selected ? category : null;
-        });
-      },
-      backgroundColor: AppConstants.backgroundColor,
-      selectedColor: AppConstants.primaryColor.withValues(alpha: 0.2),
-      checkmarkColor: AppConstants.primaryColor,
-      labelStyle: TextStyle(
-        color: isSelected ? AppConstants.primaryColor : AppConstants.textColor,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (selected) {
+          setState(() {
+            _selectedCategory = selected ? category : null;
+          });
+        },
+        backgroundColor: AppConstants.backgroundColor,
+        selectedColor: AppConstants.primaryColor.withValues(alpha: 0.2),
+        checkmarkColor: AppConstants.primaryColor,
+        labelStyle: TextStyle(
+          color:
+              isSelected ? AppConstants.primaryColor : AppConstants.textColor,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
       ),
     );
   }
 
   Widget _buildInventoryList() {
-    // Sort _filteredItems by category and name
-    final sortedItems = List<PantryItem>.from(_filteredItems)..sort((a, b) {
-      final catComp = a.category.toLowerCase().compareTo(
-        b.category.toLowerCase(),
-      );
-      if (catComp != 0) return catComp;
-      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    });
-
-    // Group items by category
-    final Map<String, List<PantryItem>> grouped = {};
-    for (final item in sortedItems) {
-      final category = item.category;
-      grouped.putIfAbsent(category, () => []).add(item);
+    // Group items by system category
+    final Map<SystemCategory, List<PantryItem>> grouped = {};
+    for (final item in _filteredItems) {
+      grouped.putIfAbsent(item.systemCategory, () => []).add(item);
     }
 
-    final List<String> sortedCategories =
+    // Sort categories by display name
+    final sortedCategories =
         grouped.keys.toList()
-          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+          ..sort((a, b) => a.displayName.compareTo(b.displayName));
 
-    // Sort items within each category by name
-    for (final cat in sortedCategories) {
-      grouped[cat]!.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-      );
+    // Calculate total items for ListView
+    int totalItems = 0;
+    for (final category in sortedCategories) {
+      totalItems += 1; // Category header
+      totalItems += grouped[category]!.length; // Items in category
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: sortedCategories.fold<int>(
-        0,
-        (prev, cat) => prev + 1 + (grouped[cat]?.length ?? 0),
-      ),
+      itemCount: totalItems,
       itemBuilder: (context, index) {
         int runningIndex = 0;
         for (final category in sortedCategories) {
@@ -239,12 +231,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
           if (index == runningIndex) {
             return Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 8),
-              child: Text(
-                category,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                children: [
+                  Text(category.emoji, style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 8),
+                  Text(
+                    category.displayName,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             );
           }
@@ -263,10 +261,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildInventoryItemTile(PantryItem item) {
-    final isLowStock = item.quantity < 5;
-    final isExpiringSoon =
-        item.expiryDate != null &&
-        item.expiryDate!.isBefore(DateTime.now().add(const Duration(days: 30)));
+    final isLowStock = item.isLowStock;
+    final isExpiringSoon = item.hasExpiringItems;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -274,11 +270,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: _getCategoryColor(
-            item.category,
+            item.systemCategory,
           ).withValues(alpha: 0.1),
           child: Icon(
-            _getCategoryIcon(item.category),
-            color: _getCategoryColor(item.category),
+            _getCategoryIcon(item.systemCategory),
+            color: _getCategoryColor(item.systemCategory),
           ),
         ),
         title: Row(
@@ -289,6 +285,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
+            if (item.isEssential)
+              Icon(Icons.priority_high, color: Colors.red, size: 16),
             if (isLowStock) Icon(Icons.warning, color: Colors.orange, size: 16),
             if (isExpiringSoon)
               Icon(Icons.schedule, color: Colors.red, size: 16),
@@ -297,22 +295,22 @@ class _InventoryScreenState extends State<InventoryScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${item.quantity} ${item.unit}'),
-            if (item.category.isNotEmpty)
+            Text('${item.totalQuantity.toStringAsFixed(1)} ${item.unit}'),
+            if (item.subcategory != null && item.subcategory!.isNotEmpty)
               Text(
-                item.category,
+                item.subcategory!,
                 style: TextStyle(
                   fontSize: 12,
                   color: AppConstants.textSecondaryColor,
                 ),
               ),
-            if (item.expiryDate != null)
+            if (item.daysOfSupply != null)
               Text(
-                'Expires: ${_formatDate(item.expiryDate!)}',
+                '${item.daysOfSupply!.toStringAsFixed(1)} days supply',
                 style: TextStyle(
                   fontSize: 12,
                   color:
-                      isExpiringSoon
+                      item.daysOfSupply! < 7
                           ? Colors.red
                           : AppConstants.textSecondaryColor,
                 ),
@@ -326,10 +324,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
               icon: const Icon(Icons.add, size: 20),
               tooltip: 'Add One',
               onPressed: () {
-                final updated = item.copyWith(
-                  quantity: item.quantity + 1,
-                  updatedAt: DateTime.now(),
+                // Add a new batch with quantity 1
+                final newBatch = ItemBatch(
+                  quantity: 1.0,
+                  purchaseDate: DateTime.now(),
+                  costPerUnit: null,
                 );
+                final updated = item.addBatch(newBatch);
                 widget.onItemUpdated(updated);
               },
               padding: EdgeInsets.zero,
@@ -339,10 +340,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
               icon: const Icon(Icons.remove, size: 20),
               tooltip: 'Remove One',
               onPressed: () {
-                final updated = item.copyWith(
-                  quantity: (item.quantity - 1).clamp(0, double.infinity),
-                  updatedAt: DateTime.now(),
-                );
+                // Consume 1 unit from oldest batch
+                final updated = item.consumeQuantity(1.0);
                 widget.onItemUpdated(updated);
               },
               padding: EdgeInsets.zero,
@@ -366,7 +365,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   (context) => InventoryItemDetailScreen(
                     item: item,
                     onDelete: widget.onDeleteItem,
-                    onEdit: widget.onItemUpdated,
+                    onEdit: widget.onEditItem,
                   ),
             ),
           );
@@ -399,69 +398,64 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Text(
             _searchQuery.isNotEmpty || _selectedCategory != null
                 ? 'Try adjusting your search or filters'
-                : 'Tap the + button to add your first item',
+                : 'Add your first item to get started',
             style: TextStyle(
               fontSize: 14,
               color: AppConstants.textSecondaryColor,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Color _getCategoryColor(String? category) {
+  Color _getCategoryColor(SystemCategory category) {
     switch (category) {
-      case 'Canned Goods':
-        return Colors.orange;
-      case 'Grains':
-        return Colors.amber;
-      case 'Beverages':
+      case SystemCategory.water:
         return Colors.blue;
-      case 'Condiments':
-        return Colors.purple;
-      case 'Snacks':
-        return Colors.pink;
-      case 'Frozen Foods':
-        return Colors.cyan;
-      case 'Dairy':
-        return Colors.white;
-      case 'Produce':
-        return Colors.green;
-      case 'Meat':
+      case SystemCategory.food:
+        return Colors.orange;
+      case SystemCategory.medical:
         return Colors.red;
-      default:
+      case SystemCategory.hygiene:
+        return Colors.purple;
+      case SystemCategory.tools:
+        return Colors.grey;
+      case SystemCategory.lighting:
+        return Colors.yellow;
+      case SystemCategory.shelter:
+        return Colors.brown;
+      case SystemCategory.communication:
+        return Colors.green;
+      case SystemCategory.security:
+        return Colors.black;
+      case SystemCategory.other:
         return AppConstants.primaryColor;
     }
   }
 
-  IconData _getCategoryIcon(String? category) {
+  IconData _getCategoryIcon(SystemCategory category) {
     switch (category) {
-      case 'Canned Goods':
+      case SystemCategory.water:
+        return Icons.water_drop;
+      case SystemCategory.food:
+        return Icons.restaurant;
+      case SystemCategory.medical:
+        return Icons.medical_services;
+      case SystemCategory.hygiene:
+        return Icons.cleaning_services;
+      case SystemCategory.tools:
+        return Icons.build;
+      case SystemCategory.lighting:
+        return Icons.lightbulb;
+      case SystemCategory.shelter:
+        return Icons.home;
+      case SystemCategory.communication:
+        return Icons.phone;
+      case SystemCategory.security:
+        return Icons.security;
+      case SystemCategory.other:
         return Icons.inventory;
-      case 'Grains':
-        return Icons.grain;
-      case 'Beverages':
-        return Icons.local_drink;
-      case 'Condiments':
-        return Icons.kitchen;
-      case 'Snacks':
-        return Icons.cake;
-      case 'Frozen Foods':
-        return Icons.ac_unit;
-      case 'Dairy':
-        return Icons.egg;
-      case 'Produce':
-        return Icons.eco;
-      case 'Meat':
-        return Icons.set_meal;
-      default:
-        return Icons.kitchen;
     }
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day}/${date.year}';
   }
 }

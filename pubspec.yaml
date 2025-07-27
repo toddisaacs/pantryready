@@ -47,6 +47,9 @@ dependencies:
   
   # HTTP requests
   http: ^1.4.0
+  
+  # UUID generation
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:
