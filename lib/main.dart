@@ -15,11 +15,15 @@ import 'package:pantryready/widgets/item_quantity_dialog.dart';
 import 'package:pantryready/services/data_service.dart';
 import 'package:pantryready/services/data_service_factory.dart';
 import 'package:pantryready/config/environment_config.dart';
+import 'package:pantryready/services/version_service.dart';
 import 'dart:async'; // Added for StreamSubscription
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Log version information for debugging
+  VersionService.logVersionInfo();
 
   // Configure based on build mode and arguments
   if (kReleaseMode) {
@@ -202,7 +206,7 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PantryReady',
+      title: VersionService.displayVersion,
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: _scaffoldMessengerKey,
       theme: ThemeData(

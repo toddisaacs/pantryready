@@ -2,13 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:pantryready/models/pantry_item.dart';
 
 class AppConstants {
-  static const Color primaryColor = Colors.green;
-  static const Color accentColor = Colors.blue;
-  static const Color backgroundColor = Color(0xFFF8F9FA);
+  // App Version Information
+  static const String appVersion = '2.0.0';
+  static const String appBuildNumber = '2';
+  static const String appName = 'PantryReady';
+  static const String appDescription =
+      'Pantry inventory management with barcode scanning';
+
+  // Version tracking for analytics and debugging
+  static const String versionString = '$appName v$appVersion+$appBuildNumber';
+  static const String displayVersion = '$appName v$appVersion';
+  static const String userAgent = '$appName/$appVersion';
+
+  // Colors
+  static const Color primaryColor = Color(0xFF4CAF50);
+  static const Color accentColor = Color(0xFF8BC34A);
+  static const Color backgroundColor = Color(0xFFF5F5F5);
   static const Color cardColor = Colors.white;
+  static const Color successColor = Color(0xFF4CAF50);
+  static const Color errorColor = Color(0xFFF44336);
+  static const Color warningColor = Color(0xFFFF9800);
   static const Color textColor = Colors.black87;
   static const Color textSecondaryColor = Color(0xFF6C757D);
-  static const Color successColor = Color(0xFF28A745);
 
   // Legacy categories for backward compatibility
   static const List<String> categories = [

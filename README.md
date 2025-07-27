@@ -48,6 +48,43 @@ A Flutter app for managing your pantry inventory with barcode scanning and produ
      ```
    - **Never commit your real firebase.json!**
 
+### Version Management
+
+The app uses semantic versioning (MAJOR.MINOR.PATCH) for easy issue tracking and release management.
+
+#### **Current Version: 1.0.0+1**
+
+#### **Version Components:**
+- **MAJOR** (1): Breaking changes, major feature releases
+- **MINOR** (0): New features, backward compatible  
+- **PATCH** (0): Bug fixes, backward compatible
+- **BUILD** (1): Build number for tracking
+
+#### **Version Management Commands:**
+```bash
+# Check current version
+./scripts/version.sh
+
+# Increment versions
+./scripts/version.sh patch    # 1.0.0 -> 1.0.1
+./scripts/version.sh minor    # 1.0.0 -> 1.1.0
+./scripts/version.sh major    # 1.0.0 -> 2.0.0
+
+# Preview changes
+./scripts/version.sh patch --dry-run
+
+# Commit with automatic version bump
+./scripts/commit_with_version.sh major "Breaking change: refactor inventory model"
+./scripts/commit_with_version.sh minor "Add new barcode scanning feature"
+./scripts/commit_with_version.sh patch "Fix crash in item editing"
+```
+
+#### **Version Information in App:**
+- Version info is displayed in Settings screen
+- Version string is included in app title
+- Version info is logged on app startup
+- Version tracking helps identify issues by version
+
 ### Running the App
 
 The app supports different data configurations for development and testing:
