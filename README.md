@@ -1,7 +1,7 @@
 # 🏠 PantryReady
 
-[![Flutter CI](https://github.com/tisaacs/pantryready/actions/workflows/flutter-ci.yml/badge.svg)](https://github.com/tisaacs/pantryready/actions/workflows/flutter-ci.yml)
-[![codecov](https://codecov.io/gh/tisaacs/pantryready/branch/main/graph/badge.svg)](https://codecov.io/gh/tisaacs/pantryready)
+[![Flutter CI](https://github.com/toddisaacs/pantryready/actions/workflows/flutter-ci.yml/badge.svg)](https://github.com/toddisaacs/pantryready/actions/workflows/flutter-ci.yml)
+[![codecov](https://codecov.io/gh/toddisaacs/pantryready/branch/main/graph/badge.svg)](https://codecov.io/gh/toddisaacs/pantryready)
 
 A Flutter app for managing your pantry inventory with barcode scanning and product lookup.
 
