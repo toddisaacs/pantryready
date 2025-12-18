@@ -599,7 +599,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     debugPrint('=== Checking for duplicate barcode: "$barcode" ===');
     debugPrint('existingItems is null: ${widget.existingItems == null}');
     debugPrint('existingItems count: ${widget.existingItems?.length ?? 0}');
-    
+
     if (barcode.isEmpty || widget.existingItems == null) {
       debugPrint('Skipping check - barcode empty or no existing items');
       return;
@@ -607,7 +607,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
     // Debug: print all existing barcodes
     for (var item in widget.existingItems!) {
-      debugPrint('  Existing item: "${item.name}" with barcode: "${item.barcode}"');
+      debugPrint(
+        '  Existing item: "${item.name}" with barcode: "${item.barcode}"',
+      );
     }
 
     final duplicate = widget.existingItems!.firstWhere(

@@ -361,9 +361,9 @@ class HomeScreen extends StatelessWidget {
                   final newItem = await Navigator.push<PantryItem>(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AddItemScreen(
-                        existingItems: pantryItems,
-                      ),
+                      builder:
+                          (context) =>
+                              AddItemScreen(existingItems: pantryItems),
                     ),
                   );
                   if (context.mounted && newItem != null) {

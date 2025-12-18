@@ -50,8 +50,13 @@ class EnvironmentFirestoreService {
   Future<void> addPantryItem(PantryItem item) async {
     try {
       // Use the item's ID as the document ID to keep them in sync
-      await _firestore.collection(_collectionName).doc(item.id).set(item.toJson());
-      debugPrint('Added item to $_collectionName: ${item.name} with ID: ${item.id}');
+      await _firestore
+          .collection(_collectionName)
+          .doc(item.id)
+          .set(item.toJson());
+      debugPrint(
+        'Added item to $_collectionName: ${item.name} with ID: ${item.id}',
+      );
     } catch (e) {
       debugPrint('Failed to add pantry item: $e');
       throw Exception('Failed to add pantry item: $e');
