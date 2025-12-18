@@ -8,8 +8,14 @@ import 'package:pantryready/services/openfoodfacts_service.dart';
 class AddItemScreen extends StatefulWidget {
   final String? initialBarcode;
   final PantryItem? suggestedItem;
+  final List<PantryItem>? existingItems;
 
-  const AddItemScreen({super.key, this.initialBarcode, this.suggestedItem});
+  const AddItemScreen({
+    super.key,
+    this.initialBarcode,
+    this.suggestedItem,
+    this.existingItems,
+  });
 
   @override
   State<AddItemScreen> createState() => _AddItemScreenState();
@@ -37,8 +43,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
     // Pre-fill barcode if provided
     if (widget.initialBarcode != null) {
       _barcodeController.text = widget.initialBarcode!;
-      // Try to fetch product details if barcode is provided
-      _fetchProductDetails(widget.initialBarcode!);
+
+      // Check if item already exists BEFORE fetching product details
+      _checkForDuplicate(widget.initialBarcode!);
     }
 
     // Pre-fill fields from suggested item if provided
@@ -229,7 +236,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       setState(() {
                         _barcodeController.text = barcode;
                       });
-                      _fetchProductDetails(barcode);
+                      // Check for duplicate BEFORE fetching from API
+                      _checkForDuplicate(barcode);
                     }
                   },
                   icon: const Icon(Icons.qr_code_scanner),
@@ -585,6 +593,87 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
       Navigator.of(context).pop(newItem);
     }
+  }
+
+  void _checkForDuplicate(String barcode) {
+    debugPrint('=== Checking for duplicate barcode: "$barcode" ===');
+    debugPrint('existingItems is null: ${widget.existingItems == null}');
+    debugPrint('existingItems count: ${widget.existingItems?.length ?? 0}');
+    
+    if (barcode.isEmpty || widget.existingItems == null) {
+      debugPrint('Skipping check - barcode empty or no existing items');
+      return;
+    }
+
+    // Debug: print all existing barcodes
+    for (var item in widget.existingItems!) {
+      debugPrint('  Existing item: "${item.name}" with barcode: "${item.barcode}"');
+    }
+
+    final duplicate = widget.existingItems!.firstWhere(
+      (item) => item.barcode == barcode,
+      orElse:
+          () => PantryItem(
+            name: '',
+            unit: '',
+            systemCategory: SystemCategory.other,
+          ),
+    );
+
+    debugPrint('Duplicate found: ${duplicate.name.isNotEmpty}');
+    debugPrint('Duplicate name: "${duplicate.name}"');
+
+    if (duplicate.name.isNotEmpty) {
+      // Found a duplicate! Pre-fill form with existing item data
+      setState(() {
+        _nameController.text = duplicate.name;
+        _quantityController.text = duplicate.totalQuantity.toString();
+        _notesController.text = duplicate.notes ?? '';
+        _selectedUnit = duplicate.unit;
+        _selectedSystemCategory = duplicate.systemCategory;
+        _selectedSubcategory = duplicate.subcategory;
+      });
+
+      // Show dialog immediately after build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showDuplicateDialog(duplicate);
+        }
+      });
+    } else {
+      // No duplicate - fetch product details from API
+      _fetchProductDetails(barcode);
+    }
+  }
+
+  void _showDuplicateDialog(PantryItem existingItem) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing by tapping outside
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Item Already Exists'),
+            content: Text(
+              'An item with this barcode already exists:\n\n'
+              '"${existingItem.name}"\n'
+              'Current quantity: ${existingItem.totalQuantity} ${existingItem.unit}\n\n'
+              'This barcode is already in your inventory. You cannot create a duplicate item.',
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Close add screen
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
   }
 
   double? _getDefaultConsumptionRate(SystemCategory category) {

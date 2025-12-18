@@ -142,7 +142,19 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     });
 
     // Also delete from data service
-    _dataService.deletePantryItem(item.id);
+    _dataService.deletePantryItem(item.id).catchError((error) {
+      debugPrint('Error deleting item: $error');
+      _scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete item: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      // Re-add the item to the list if delete failed
+      setState(() {
+        _pantryItems.add(item);
+      });
+    });
   }
 
   // Method to edit an existing pantry item (direct navigation)
@@ -338,6 +350,7 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
                                       builder:
                                           (context) => AddItemScreen(
                                             initialBarcode: scannedBarcode,
+                                            existingItems: _pantryItems,
                                           ),
                                     ),
                                   );

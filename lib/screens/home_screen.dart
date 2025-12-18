@@ -361,7 +361,9 @@ class HomeScreen extends StatelessWidget {
                   final newItem = await Navigator.push<PantryItem>(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const AddItemScreen(),
+                      builder: (context) => AddItemScreen(
+                        existingItems: pantryItems,
+                      ),
                     ),
                   );
                   if (context.mounted && newItem != null) {
@@ -387,16 +389,48 @@ class HomeScreen extends StatelessWidget {
                       builder: (context) => const BarcodeScannerScreen(),
                     ),
                   );
-                  if (context.mounted && barcode != null) {
-                    final newItem = await Navigator.push<PantryItem>(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => AddItemScreen(initialBarcode: barcode),
-                      ),
-                    );
-                    if (context.mounted && newItem != null) {
-                      onAddItem(newItem);
+                  if (context.mounted &&
+                      barcode != null &&
+                      barcode.isNotEmpty) {
+                    // Check if item with this barcode already exists
+                    PantryItem? existingItem;
+                    for (final item in pantryItems) {
+                      if (item.barcode == barcode) {
+                        existingItem = item;
+                        break;
+                      }
+                    }
+
+                    if (existingItem != null) {
+                      // Item exists - show quantity dialog
+                      if (context.mounted) {
+                        showDialog(
+                          context: context,
+                          builder:
+                              (context) => ItemQuantityDialog(
+                                item: existingItem!,
+                                onUpdateItem: onUpdateItem!,
+                                onEditItem: onEditItem!,
+                              ),
+                        );
+                      }
+                    } else {
+                      // New item - go to add screen
+                      if (context.mounted) {
+                        final newItem = await Navigator.push<PantryItem>(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => AddItemScreen(
+                                  initialBarcode: barcode,
+                                  existingItems: pantryItems,
+                                ),
+                          ),
+                        );
+                        if (context.mounted && newItem != null) {
+                          onAddItem(newItem);
+                        }
+                      }
                     }
                   }
                 },

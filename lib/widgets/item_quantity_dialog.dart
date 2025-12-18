@@ -38,6 +38,12 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final quantityInput = double.tryParse(_quantityController.text) ?? 0;
+    final resultingQuantity =
+        _isAddMode
+            ? widget.item.totalQuantity + quantityInput
+            : widget.item.totalQuantity - quantityInput;
+
     return AlertDialog(
       title: Text('${_isAddMode ? 'Add' : 'Remove'} ${widget.item.name}'),
       content: Column(
@@ -45,8 +51,16 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
         children: [
           Text(
             'Current quantity: ${widget.item.totalQuantity.toStringAsFixed(1)} ${widget.item.unit}',
-            style: const TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
+          if (quantityInput > 0)
+            Text(
+              'After: ${resultingQuantity.toStringAsFixed(1)} ${widget.item.unit}',
+              style: TextStyle(
+                fontSize: 14,
+                color: resultingQuantity <= 0 ? Colors.red : Colors.green,
+              ),
+            ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -137,6 +151,56 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
+        if (!_isAddMode &&
+            widget.item.totalQuantity <= 0 &&
+            widget.onEditItem != null)
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Show confirmation dialog for deletion
+              showDialog(
+                context: context,
+                builder:
+                    (context) => AlertDialog(
+                      title: const Text('Delete Item'),
+                      content: Text(
+                        'This item has no quantity remaining. Would you like to delete "${widget.item.name}"?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Keep Item'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            // We need a delete callback - for now just close
+                            Navigator.of(context).pop();
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'To delete, use the delete button in item details',
+                                ),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete Item'),
+          ),
         ElevatedButton(
           onPressed: _updateQuantity,
           style: ElevatedButton.styleFrom(
@@ -144,7 +208,7 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
                 _isAddMode ? AppConstants.primaryColor : Colors.red,
             foregroundColor: Colors.white,
           ),
-          child: Text(_isAddMode ? 'Add' : 'Remove'),
+          child: const Text('Confirm'),
         ),
       ],
     );

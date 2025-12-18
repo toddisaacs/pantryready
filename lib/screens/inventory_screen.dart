@@ -139,7 +139,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   final newItem = await Navigator.push<PantryItem>(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const AddItemScreen(),
+                      builder: (context) => AddItemScreen(
+                        existingItems: widget.pantryItems,
+                      ),
                     ),
                   );
                   if (newItem != null) {

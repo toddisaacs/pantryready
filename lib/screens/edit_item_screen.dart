@@ -390,9 +390,30 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (_formKey.currentState!.validate()) {
       final quantity = double.parse(_quantityController.text);
 
-      // Create a new batch if expiry date is set
+      // Update existing batches or create a new one
       List<ItemBatch> updatedBatches = List.from(widget.item.batches);
-      if (_selectedExpiryDate != null) {
+
+      // If there's a quantity change and batches exist, update the most recent batch
+      if (updatedBatches.isNotEmpty && quantity != widget.item.totalQuantity) {
+        // Update the most recent batch with the new total quantity
+        final latestBatch = updatedBatches.last;
+        final quantityDiff = quantity - widget.item.totalQuantity;
+        updatedBatches[updatedBatches.length - 1] = latestBatch.copyWith(
+          quantity: latestBatch.quantity + quantityDiff,
+        );
+      } else if (updatedBatches.isEmpty && quantity > 0) {
+        // Create initial batch if none exist
+        updatedBatches.add(
+          ItemBatch(
+            quantity: quantity,
+            purchaseDate: DateTime.now(),
+            expiryDate: _selectedExpiryDate,
+            notes:
+                _notesController.text.isNotEmpty ? _notesController.text : null,
+          ),
+        );
+      } else if (_selectedExpiryDate != null) {
+        // Add a new batch if expiry date is set
         final newBatch = ItemBatch(
           quantity: quantity,
           purchaseDate: DateTime.now(),

@@ -39,6 +39,8 @@ class EnvironmentFirestoreService {
         .map((snapshot) {
           return snapshot.docs.map((doc) {
             final data = doc.data();
+            debugPrint('Loading item from Firestore: ${doc.id}');
+            debugPrint('  Data: ${data['name']}, batches: ${data['batches']}');
             return PantryItem.fromJson({'id': doc.id, ...data});
           }).toList();
         });
@@ -47,9 +49,9 @@ class EnvironmentFirestoreService {
   // Add a new pantry item
   Future<void> addPantryItem(PantryItem item) async {
     try {
-      // Let Firestore auto-generate the document ID
-      await _firestore.collection(_collectionName).add(item.toJson());
-      debugPrint('Added item to $_collectionName: ${item.name}');
+      // Use the item's ID as the document ID to keep them in sync
+      await _firestore.collection(_collectionName).doc(item.id).set(item.toJson());
+      debugPrint('Added item to $_collectionName: ${item.name} with ID: ${item.id}');
     } catch (e) {
       debugPrint('Failed to add pantry item: $e');
       throw Exception('Failed to add pantry item: $e');
