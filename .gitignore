@@ -62,3 +62,7 @@ firebase.json
 lib/generated_plugin_registrant.dart
 firepit-log.txt
 firebase.json
+
+# Coverage
+coverage/
+*.lcov

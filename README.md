@@ -1,5 +1,8 @@
 # 🏠 PantryReady
 
+[![Flutter CI](https://github.com/tisaacs/pantryready/actions/workflows/flutter-ci.yml/badge.svg)](https://github.com/tisaacs/pantryready/actions/workflows/flutter-ci.yml)
+[![codecov](https://codecov.io/gh/tisaacs/pantryready/branch/main/graph/badge.svg)](https://codecov.io/gh/tisaacs/pantryready)
+
 A Flutter app for managing your pantry inventory with barcode scanning and product lookup.
 
 ## ✨ Features
@@ -323,10 +326,101 @@ Run the test suite:
 flutter test
 ```
 
-All 60 tests should pass, including:
+Run tests with coverage:
+
+```bash
+flutter test --coverage
+```
+
+All 47 tests should pass, including:
 - Widget tests for UI components
 - Service tests for data operations
 - Integration tests for barcode functionality
+
+## ✅ Code Quality & CI
+
+### Continuous Integration
+
+The project uses GitHub Actions for automated testing and quality checks. Every push and PR runs:
+
+- ✅ **Code formatting** (`dart format`)
+- ✅ **Static analysis** (`flutter analyze`)
+- ✅ **Unit & widget tests** (`flutter test`)
+- ✅ **Coverage reporting** (uploaded to Codecov)
+- ✅ **Dependency audit** (`flutter pub outdated`)
+
+View CI results in the [Actions tab](https://github.com/tisaacs/pantryready/actions).
+
+### Pre-commit Hooks
+
+Enable pre-commit checks to catch issues before pushing:
+
+```bash
+# Enable git hooks
+git config core.hooksPath .githooks
+```
+
+The pre-commit hook runs:
+- Code formatting checks
+- Flutter analyze
+- All tests
+
+To bypass (not recommended):
+```bash
+git commit --no-verify
+```
+
+### Code Quality Tools
+
+**Format code:**
+```bash
+dart format .
+```
+
+**Analyze code:**
+```bash
+flutter analyze
+```
+
+**Check outdated dependencies:**
+```bash
+flutter pub outdated
+```
+
+**Generate coverage locally:**
+```bash
+flutter test --coverage
+# View with lcov (install: brew install lcov)
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html
+```
+
+### Lint Rules
+
+The project uses strict lint rules defined in [analysis_options.yaml](analysis_options.yaml):
+
+- **Code style:** Single quotes, const constructors, final fields
+- **Error prevention:** No print statements, cancel subscriptions, close sinks
+- **Best practices:** Return types, key in widgets, trailing commas
+- **Readability:** Consistent formatting, super parameters
+
+To temporarily disable a lint:
+```dart
+// ignore: rule_name
+final value = something();
+```
+
+### Coverage Setup
+
+To see coverage badges in your README:
+
+1. Sign up at [codecov.io](https://codecov.io) with your GitHub account
+2. Add the repository to Codecov
+3. Get your upload token from Settings → General
+4. Add the token to GitHub: Settings → Secrets → Actions → New repository secret
+   - Name: `CODECOV_TOKEN`
+   - Value: Your token from Codecov
+5. The workflow will automatically upload coverage on every push
 
 ## 📚 Documentation
 

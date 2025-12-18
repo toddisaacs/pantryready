@@ -36,8 +36,25 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Check formatting
+        run: dart format --set-exit-if-changed .
+
       - name: Flutter analyze
         run: flutter analyze --no-fatal-infos
 
-      - name: Run tests
+      - name: Check for outdated dependencies
+        run: flutter pub outdated
+        continue-on-error: true
+
+      - name: Run tests with coverage
         run: flutter test --coverage
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: pantryready-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
