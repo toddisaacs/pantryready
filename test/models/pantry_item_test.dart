@@ -153,13 +153,7 @@ void main() {
         unit: 'lbs',
         systemCategory: SystemCategory.food,
         subcategory: 'Grains',
-        batches: [
-          ItemBatch(
-            id: 'batch-1',
-            quantity: 10.0,
-            purchaseDate: now,
-          ),
-        ],
+        batches: [ItemBatch(id: 'batch-1', quantity: 10.0, purchaseDate: now)],
         barcode: '123',
         notes: 'Test',
         isEssential: true,
@@ -229,10 +223,7 @@ void main() {
             purchaseDate: now,
             expiryDate: now.subtract(const Duration(days: 1)),
           ),
-          ItemBatch(
-            quantity: 3.0,
-            purchaseDate: now,
-          ), // No expiry
+          ItemBatch(quantity: 3.0, purchaseDate: now), // No expiry
         ],
       );
 
@@ -245,9 +236,7 @@ void main() {
         unit: 'lbs',
         systemCategory: SystemCategory.food,
         dailyConsumptionRate: 2.0,
-        batches: [
-          ItemBatch(quantity: 20.0, purchaseDate: DateTime.now()),
-        ],
+        batches: [ItemBatch(quantity: 20.0, purchaseDate: DateTime.now())],
       );
 
       expect(item.daysOfSupply, 10.0); // 20 / 2 = 10 days
@@ -258,9 +247,7 @@ void main() {
         name: 'Rice',
         unit: 'lbs',
         systemCategory: SystemCategory.food,
-        batches: [
-          ItemBatch(quantity: 20.0, purchaseDate: DateTime.now()),
-        ],
+        batches: [ItemBatch(quantity: 20.0, purchaseDate: DateTime.now())],
       );
 
       expect(item.daysOfSupply, isNull);
@@ -274,9 +261,7 @@ void main() {
         unit: 'lbs',
         systemCategory: SystemCategory.food,
         minStockLevel: 10.0,
-        batches: [
-          ItemBatch(quantity: 5.0, purchaseDate: DateTime.now()),
-        ],
+        batches: [ItemBatch(quantity: 5.0, purchaseDate: DateTime.now())],
       );
 
       expect(item.isLowStock, true);
@@ -288,9 +273,7 @@ void main() {
         unit: 'lbs',
         systemCategory: SystemCategory.food,
         minStockLevel: 10.0,
-        batches: [
-          ItemBatch(quantity: 15.0, purchaseDate: DateTime.now()),
-        ],
+        batches: [ItemBatch(quantity: 15.0, purchaseDate: DateTime.now())],
       );
 
       expect(item.isLowStock, false);
@@ -301,9 +284,7 @@ void main() {
         name: 'Rice',
         unit: 'lbs',
         systemCategory: SystemCategory.food,
-        batches: [
-          ItemBatch(quantity: 5.0, purchaseDate: DateTime.now()),
-        ],
+        batches: [ItemBatch(quantity: 5.0, purchaseDate: DateTime.now())],
       );
 
       expect(item.isLowStock, false);
@@ -315,9 +296,7 @@ void main() {
         unit: 'lbs',
         systemCategory: SystemCategory.food,
         maxStockLevel: 50.0,
-        batches: [
-          ItemBatch(quantity: 60.0, purchaseDate: DateTime.now()),
-        ],
+        batches: [ItemBatch(quantity: 60.0, purchaseDate: DateTime.now())],
       );
 
       expect(item.isExcessiveStock, true);
@@ -366,9 +345,7 @@ void main() {
         name: 'Rice',
         unit: 'lbs',
         systemCategory: SystemCategory.food,
-        batches: [
-          ItemBatch(quantity: 10.0, purchaseDate: DateTime.now()),
-        ],
+        batches: [ItemBatch(quantity: 10.0, purchaseDate: DateTime.now())],
       );
 
       final newBatch = ItemBatch(quantity: 5.0, purchaseDate: DateTime.now());
@@ -387,16 +364,8 @@ void main() {
         unit: 'lbs',
         systemCategory: SystemCategory.food,
         batches: [
-          ItemBatch(
-            id: 'old',
-            quantity: 10.0,
-            purchaseDate: old,
-          ),
-          ItemBatch(
-            id: 'recent',
-            quantity: 5.0,
-            purchaseDate: recent,
-          ),
+          ItemBatch(id: 'old', quantity: 10.0, purchaseDate: old),
+          ItemBatch(id: 'recent', quantity: 5.0, purchaseDate: recent),
         ],
       );
 
@@ -453,7 +422,10 @@ void main() {
 
       final updated = item.consumeQuantity(8.0);
 
-      expect(updated.batches.length, 2); // 1st batch gone, 2nd partial, 3rd full
+      expect(
+        updated.batches.length,
+        2,
+      ); // 1st batch gone, 2nd partial, 3rd full
       expect(updated.totalQuantity, 7.0); // 15 - 8 = 7
     });
 
@@ -476,11 +448,7 @@ void main() {
             purchaseDate: now,
             expiryDate: now.add(const Duration(days: 10)),
           ),
-          ItemBatch(
-            id: 'none',
-            quantity: 5.0,
-            purchaseDate: now,
-          ),
+          ItemBatch(id: 'none', quantity: 5.0, purchaseDate: now),
         ],
       );
 
@@ -525,9 +493,7 @@ void main() {
         unit: 'gallons',
         systemCategory: SystemCategory.water,
         dailyConsumptionRate: 1.0, // per person
-        batches: [
-          ItemBatch(quantity: 30.0, purchaseDate: DateTime.now()),
-        ],
+        batches: [ItemBatch(quantity: 30.0, purchaseDate: DateTime.now())],
         applicableScenarios: [SurvivalScenario.powerOutage],
       );
 
@@ -539,26 +505,26 @@ void main() {
       expect(days, 10.0); // 30 gallons / (1 * 3) = 10 days
     });
 
-    test('getDaysOfSupplyForScenario returns null for non-applicable scenario',
-        () {
-      final item = PantryItem(
-        name: 'Water',
-        unit: 'gallons',
-        systemCategory: SystemCategory.water,
-        dailyConsumptionRate: 1.0,
-        batches: [
-          ItemBatch(quantity: 30.0, purchaseDate: DateTime.now()),
-        ],
-        applicableScenarios: [SurvivalScenario.powerOutage],
-      );
+    test(
+      'getDaysOfSupplyForScenario returns null for non-applicable scenario',
+      () {
+        final item = PantryItem(
+          name: 'Water',
+          unit: 'gallons',
+          systemCategory: SystemCategory.water,
+          dailyConsumptionRate: 1.0,
+          batches: [ItemBatch(quantity: 30.0, purchaseDate: DateTime.now())],
+          applicableScenarios: [SurvivalScenario.powerOutage],
+        );
 
-      final days = item.getDaysOfSupplyForScenario(
-        SurvivalScenario.earthquake,
-        3,
-      );
+        final days = item.getDaysOfSupplyForScenario(
+          SurvivalScenario.earthquake,
+          3,
+        );
 
-      expect(days, isNull);
-    });
+        expect(days, isNull);
+      },
+    );
   });
 
   group('PantryItem - CopyWith', () {
@@ -569,10 +535,7 @@ void main() {
         systemCategory: SystemCategory.food,
       );
 
-      final updated = item.copyWith(
-        name: 'Brown Rice',
-        isEssential: true,
-      );
+      final updated = item.copyWith(name: 'Brown Rice', isEssential: true);
 
       expect(updated.name, 'Brown Rice');
       expect(updated.isEssential, true);
