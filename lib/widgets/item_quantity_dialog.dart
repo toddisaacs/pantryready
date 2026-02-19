@@ -6,12 +6,14 @@ class ItemQuantityDialog extends StatefulWidget {
   final PantryItem item;
   final Function(PantryItem) onUpdateItem;
   final Function(PantryItem)? onEditItem;
+  final bool? initialAddMode;
 
   const ItemQuantityDialog({
     super.key,
     required this.item,
     required this.onUpdateItem,
     this.onEditItem,
+    this.initialAddMode,
   });
 
   @override
@@ -28,6 +30,9 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
     super.initState();
     _selectedUnit = widget.item.unit;
     _quantityController.text = '1';
+    if (widget.initialAddMode != null) {
+      _isAddMode = widget.initialAddMode!;
+    }
   }
 
   @override

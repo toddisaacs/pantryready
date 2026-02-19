@@ -64,13 +64,12 @@ class InventoryItemDetailScreen extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 30,
-              backgroundColor: _getCategoryColor(
-                item.systemCategory,
-              ).withValues(alpha: 0.1),
+              backgroundColor: AppConstants.categoryColors[item.systemCategory]!
+                  .withValues(alpha: 0.1),
               child: Icon(
-                _getCategoryIcon(item.systemCategory),
+                AppConstants.categoryIcons[item.systemCategory],
                 size: 30,
-                color: _getCategoryColor(item.systemCategory),
+                color: AppConstants.categoryColors[item.systemCategory]!,
               ),
             ),
             const SizedBox(width: 16),
@@ -452,56 +451,6 @@ class InventoryItemDetailScreen extends StatelessWidget {
             ],
           ),
     );
-  }
-
-  Color _getCategoryColor(SystemCategory category) {
-    switch (category) {
-      case SystemCategory.water:
-        return Colors.blue;
-      case SystemCategory.food:
-        return Colors.orange;
-      case SystemCategory.medical:
-        return Colors.red;
-      case SystemCategory.hygiene:
-        return Colors.purple;
-      case SystemCategory.tools:
-        return Colors.grey;
-      case SystemCategory.lighting:
-        return Colors.yellow;
-      case SystemCategory.shelter:
-        return Colors.brown;
-      case SystemCategory.communication:
-        return Colors.green;
-      case SystemCategory.security:
-        return Colors.black;
-      case SystemCategory.other:
-        return AppConstants.primaryColor;
-    }
-  }
-
-  IconData _getCategoryIcon(SystemCategory category) {
-    switch (category) {
-      case SystemCategory.water:
-        return Icons.water_drop;
-      case SystemCategory.food:
-        return Icons.restaurant;
-      case SystemCategory.medical:
-        return Icons.medical_services;
-      case SystemCategory.hygiene:
-        return Icons.cleaning_services;
-      case SystemCategory.tools:
-        return Icons.build;
-      case SystemCategory.lighting:
-        return Icons.lightbulb;
-      case SystemCategory.shelter:
-        return Icons.home;
-      case SystemCategory.communication:
-        return Icons.phone;
-      case SystemCategory.security:
-        return Icons.security;
-      case SystemCategory.other:
-        return Icons.inventory;
-    }
   }
 
   String _formatDate(DateTime date) {

@@ -5,18 +5,18 @@ import 'package:pantryready/models/pantry_item.dart';
 
 void main() {
   group('AddItemScreen', () {
-    testWidgets('AddItemScreen renders all form fields', (
+    testWidgets('AddItemScreen renders essential form fields', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const MaterialApp(home: AddItemScreen()));
 
-      // Verify all form fields are present
-      expect(find.text('Barcode'), findsAtLeastNWidgets(1));
-      expect(find.text('Basic Information'), findsOneWidget);
+      // Quick Add fields are always visible
+      expect(find.text('Item Name'), findsAtLeastNWidgets(1));
       expect(find.text('Category'), findsOneWidget);
-      expect(find.text('Quantity'), findsAtLeastNWidgets(1));
-      expect(find.text('Expiry Date'), findsAtLeastNWidgets(1));
-      expect(find.text('Notes'), findsAtLeastNWidgets(1));
+      expect(find.text('Qty'), findsAtLeastNWidgets(1));
+      expect(find.text('Unit'), findsAtLeastNWidgets(1));
+      // More Details is collapsed
+      expect(find.text('More Details'), findsOneWidget);
     });
 
     testWidgets('AddItemScreen validates required fields', (
@@ -24,23 +24,20 @@ void main() {
     ) async {
       await tester.pumpWidget(const MaterialApp(home: AddItemScreen()));
 
+      // Clear the default quantity to trigger validation
+      await tester.enterText(find.widgetWithText(TextFormField, 'Qty'), '');
+
       // Try to save without entering required fields
       await tester.tap(find.text('Save Item'), warnIfMissed: false);
       await tester.pump();
 
-      // Should show validation errors - check if validation is working
       final nameError = find.text('Please enter an item name');
-      final quantityError = find.text('Please enter a quantity');
-
       if (nameError.evaluate().isNotEmpty) {
         expect(nameError, findsOneWidget);
       }
-      if (quantityError.evaluate().isNotEmpty) {
-        expect(quantityError, findsOneWidget);
-      }
     });
 
-    testWidgets('AddItemScreen validates quantity is a positive number', (
+    testWidgets('AddItemScreen validates quantity is a valid number', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const MaterialApp(home: AddItemScreen()));
@@ -52,17 +49,13 @@ void main() {
       );
 
       // Enter invalid quantity
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Quantity'),
-        '-1',
-      );
+      await tester.enterText(find.widgetWithText(TextFormField, 'Qty'), 'abc');
 
       // Try to save
       await tester.tap(find.text('Save Item'), warnIfMissed: false);
       await tester.pump();
 
-      // Should show validation error - check if validation is working
-      final validationError = find.text('Please enter a valid number');
+      final validationError = find.text('Invalid');
       if (validationError.evaluate().isNotEmpty) {
         expect(validationError, findsOneWidget);
       }
@@ -71,90 +64,79 @@ void main() {
     testWidgets('AddItemScreen creates PantryItem with valid input', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: AddItemScreen()));
+      PantryItem? savedItem;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder:
+                (context) => ElevatedButton(
+                  onPressed: () async {
+                    final result = await Navigator.push<PantryItem>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddItemScreen(),
+                      ),
+                    );
+                    savedItem = result;
+                  },
+                  child: const Text('Open'),
+                ),
+          ),
+        ),
+      );
+
+      // Navigate to AddItemScreen
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
 
       // Fill in the form
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Item Name'),
         'Test Item',
       );
-
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Quantity'),
-        '5',
-      );
-
-      // Select unit
-      await tester.tap(
-        find.byType(DropdownButtonFormField<String>).first,
-        warnIfMissed: false,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('pieces').last);
-      await tester.pumpAndSettle();
-
-      // Select system category
-      await tester.tap(
-        find.byType(DropdownButtonFormField<SystemCategory>).first,
-        warnIfMissed: false,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Food').last);
-      await tester.pumpAndSettle();
-
-      // Enter notes
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Notes'),
-        'Test notes',
-      );
+      await tester.enterText(find.widgetWithText(TextFormField, 'Qty'), '5');
 
       // Save the item
       await tester.tap(find.text('Save Item'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
-      // Verify the item was created (this would be handled by the callback in real app)
-      // For now, just verify the form was filled correctly
-      expect(find.text('Test Item'), findsOneWidget);
-      expect(find.text('5'), findsOneWidget);
-      expect(find.text('Test notes'), findsOneWidget);
+      // Verify the item was returned
+      expect(savedItem, isNotNull);
+      expect(savedItem!.name, equals('Test Item'));
+      expect(savedItem!.totalQuantity, equals(5.0));
     });
 
-    testWidgets('AddItemScreen shows date picker on calendar icon tap', (
+    testWidgets('AddItemScreen shows date picker in More Details', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const MaterialApp(home: AddItemScreen()));
+
+      // Expand More Details
+      await tester.tap(find.text('More Details'));
+      await tester.pumpAndSettle();
 
       // Find and tap the calendar icon
       await tester.tap(find.byIcon(Icons.calendar_today), warnIfMissed: false);
       await tester.pumpAndSettle();
 
-      // Verify date picker dialog appears or the tap was successful
-      // The date picker might not appear in test environment, so just verify the tap worked
       expect(find.byIcon(Icons.calendar_today), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('AddItemScreen updates expiry date when selected from picker', (
+    testWidgets('AddItemScreen shows expanded details', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const MaterialApp(home: AddItemScreen()));
 
-      // Initially should show "Select date"
-      expect(find.text('Select date'), findsOneWidget);
-
-      // Tap calendar icon to open date picker
-      await tester.tap(find.byIcon(Icons.calendar_today), warnIfMissed: false);
+      // Expand More Details
+      await tester.tap(find.text('More Details'));
       await tester.pumpAndSettle();
 
-      // Select a date - try to find the OK button
-      final okButton = find.text('OK');
-      if (okButton.evaluate().isNotEmpty) {
-        await tester.tap(okButton);
-        await tester.pumpAndSettle();
-      }
-
-      // The date picker behavior might vary in test environment
-      // Just verify the test completed without errors
-      expect(true, isTrue);
+      // Should now show detail fields
+      expect(find.text('Subcategory (Optional)'), findsOneWidget);
+      expect(find.text('Expiry Date'), findsAtLeastNWidgets(1));
+      expect(find.text('Notes'), findsAtLeastNWidgets(1));
+      expect(find.text('Barcode'), findsAtLeastNWidgets(1));
     });
   });
 }

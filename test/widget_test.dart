@@ -1,40 +1,44 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pantryready/screens/home_screen.dart';
 import 'package:pantryready/screens/inventory_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
 
 void main() {
-  testWidgets('Home screen displays welcome message', (
+  testWidgets('Alerts screen shows friendly empty state when no alerts', (
     WidgetTester tester,
   ) async {
-    // Test the HomeScreen directly instead of the full app to avoid Firebase issues
+    final testItems = [
+      PantryItem(
+        id: '1',
+        name: 'Bottled Water',
+        unit: 'bottles',
+        systemCategory: SystemCategory.water,
+        subcategory: 'Beverages',
+        batches: [ItemBatch(quantity: 50.0, purchaseDate: DateTime.now())],
+        minStockLevel: 5.0,
+        maxStockLevel: 100.0,
+      ),
+    ];
+
     await tester.pumpWidget(
       MaterialApp(
-        home: HomeScreen(
-          pantryItems: const [],
+        home: InventoryScreen(
+          pantryItems: testItems,
           onAddItem: (item) {},
-          onUpdateItem: (item) {},
+          onDeleteItem: (item) {},
           onEditItem: (item) {},
+          onItemUpdated: (item) {},
+          filterMode: InventoryFilterMode.alerts,
         ),
       ),
     );
 
-    // Verify the welcome message is shown on the Home screen.
-    expect(find.text('Welcome to PantryReady!'), findsOneWidget);
+    expect(find.text('Everything looks good!'), findsOneWidget);
   });
 
   testWidgets('Inventory screen displays items grouped by category', (
     WidgetTester tester,
   ) async {
-    // Test the InventoryScreen directly with sample data
     final testItems = [
       PantryItem(
         id: '1',
@@ -70,14 +74,15 @@ void main() {
           onDeleteItem: (item) {},
           onEditItem: (item) {},
           onItemUpdated: (item) {},
+          filterMode: InventoryFilterMode.all,
         ),
       ),
     );
 
-    // Check for the categories and items
-    expect(find.text('Water'), findsWidgets);
+    // Check for items (category headers are now uppercase)
+    expect(find.text('WATER'), findsWidgets);
     expect(find.text('Bottled Water'), findsOneWidget);
-    expect(find.text('Food'), findsWidgets);
+    expect(find.text('FOOD'), findsWidgets);
     expect(find.text('Canned Beans'), findsOneWidget);
     expect(find.text('Rice'), findsOneWidget);
   });
@@ -110,6 +115,7 @@ void main() {
           },
           onEditItem: (item) {},
           onItemUpdated: (item) {},
+          filterMode: InventoryFilterMode.all,
         ),
       ),
     );
@@ -169,6 +175,7 @@ void main() {
           },
           onEditItem: (item) {},
           onItemUpdated: (item) {},
+          filterMode: InventoryFilterMode.all,
         ),
       ),
     );

@@ -3,10 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pantryready/firebase_options.dart';
 import 'package:pantryready/screens/add_item_screen.dart';
-import 'package:pantryready/screens/home_screen.dart';
 import 'package:pantryready/screens/inventory_screen.dart';
 import 'package:pantryready/screens/barcode_scanner_screen.dart';
 import 'package:pantryready/screens/edit_item_screen.dart';
+import 'package:pantryready/screens/inventory_item_detail_screen.dart';
 import 'package:pantryready/screens/settings_screen.dart';
 import 'package:pantryready/screens/environment_settings_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
@@ -194,25 +194,212 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     _dataService.updatePantryItem(updatedItem);
   }
 
+  // Nav index mapping: 0=Pantry, 1=Scan(intercepted), 2=Alerts, 3=Settings
+  // IndexedStack children: 0=Pantry, 1=Alerts, 2=Settings
+  static const _navToStack = {0: 0, 2: 1, 3: 2};
+
   void _onItemTapped(int index) {
+    if (index == 1) {
+      _showScanModeSheet();
+      return;
+    }
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  // Test Firestore connection
-  void _testFirestoreConnection() {
-    _scaffoldMessengerKey.currentState?.showSnackBar(
-      SnackBar(
-        content: Text(
-          'Firestore Status: ${EnvironmentConfig.useFirestore ? "Connected" : "Not Connected"} - Profile: ${EnvironmentConfig.firestoreProfile}',
+  void _showScanModeSheet() {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return;
+
+    showModalBottomSheet(
+      context: ctx,
+      backgroundColor: AppConstants.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (context) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppConstants.textSecondaryColor.withValues(
+                        alpha: 0.3,
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'What are you doing?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppConstants.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildScanOption(
+                    context,
+                    ScanMode.shelve,
+                    Icons.add_circle_outline,
+                    AppConstants.successColor,
+                    'Shelving',
+                    'Adding items to pantry',
+                  ),
+                  _buildScanOption(
+                    context,
+                    ScanMode.remove,
+                    Icons.remove_circle_outline,
+                    AppConstants.errorColor,
+                    'Removing',
+                    'Taking items from pantry',
+                  ),
+                  _buildScanOption(
+                    context,
+                    ScanMode.check,
+                    Icons.info_outline,
+                    const Color(0xFF2196F3),
+                    'Checking',
+                    'View stock level',
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildScanOption(
+    BuildContext context,
+    ScanMode mode,
+    IconData icon,
+    Color color,
+    String title,
+    String subtitle,
+  ) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.15),
+        child: Icon(icon, color: color),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: AppConstants.textColor,
         ),
-        backgroundColor:
-            EnvironmentConfig.useFirestore
-                ? AppConstants.successColor
-                : Colors.orange,
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(color: AppConstants.textSecondaryColor),
+      ),
+      onTap: () {
+        Navigator.pop(context);
+        _handleBarcodeScan(mode);
+      },
+    );
+  }
+
+  Future<void> _handleBarcodeScan(ScanMode mode) async {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null || !mounted) return;
+
+    final String? scannedBarcode = await Navigator.push<String>(
+      ctx,
+      MaterialPageRoute(
+        builder: (context) => BarcodeScannerScreen(scanMode: mode),
       ),
     );
+    if (scannedBarcode == null || scannedBarcode.isEmpty || !mounted) return;
+
+    PantryItem? existingItem;
+    for (final item in _pantryItems) {
+      if (item.barcode == scannedBarcode) {
+        existingItem = item;
+        break;
+      }
+    }
+
+    final scanCtx = navigatorKey.currentContext;
+    if (scanCtx == null || !mounted) return;
+
+    switch (mode) {
+      case ScanMode.shelve:
+        if (existingItem != null) {
+          showDialog(
+            context: scanCtx,
+            builder:
+                (context) => ItemQuantityDialog(
+                  item: existingItem!,
+                  onUpdateItem: _updatePantryItem,
+                  onEditItem: _editPantryItem,
+                  initialAddMode: true,
+                ),
+          );
+        } else {
+          final PantryItem? newItem = await Navigator.push<PantryItem>(
+            scanCtx,
+            MaterialPageRoute(
+              builder:
+                  (context) => AddItemScreen(
+                    initialBarcode: scannedBarcode,
+                    existingItems: _pantryItems,
+                  ),
+            ),
+          );
+          if (mounted && newItem != null) {
+            _addPantryItem(newItem);
+          }
+        }
+      case ScanMode.remove:
+        if (existingItem != null) {
+          showDialog(
+            context: scanCtx,
+            builder:
+                (context) => ItemQuantityDialog(
+                  item: existingItem!,
+                  onUpdateItem: _updatePantryItem,
+                  onEditItem: _editPantryItem,
+                  initialAddMode: false,
+                ),
+          );
+        } else {
+          _scaffoldMessengerKey.currentState?.showSnackBar(
+            const SnackBar(
+              content: Text('Item not found in pantry'),
+              backgroundColor: AppConstants.warningColor,
+            ),
+          );
+        }
+      case ScanMode.check:
+        if (existingItem != null) {
+          Navigator.push(
+            scanCtx,
+            MaterialPageRoute(
+              builder:
+                  (context) => InventoryItemDetailScreen(
+                    item: existingItem!,
+                    onDelete: _deletePantryItem,
+                    onEdit: _editPantryItem,
+                  ),
+            ),
+          );
+        } else {
+          _scaffoldMessengerKey.currentState?.showSnackBar(
+            const SnackBar(
+              content: Text('Item not found in pantry'),
+              backgroundColor: AppConstants.warningColor,
+            ),
+          );
+        }
+    }
   }
 
   @override
@@ -222,12 +409,12 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: _scaffoldMessengerKey,
       theme: ThemeData(
-        primarySwatch: Colors.green,
+        primarySwatch: _buildBrownSwatch(),
         primaryColor: AppConstants.primaryColor,
         scaffoldBackgroundColor: AppConstants.backgroundColor,
-        fontFamily: 'Roboto', // Use Roboto as fallback font
+        fontFamily: 'Roboto',
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppConstants.primaryColor,
+          backgroundColor: AppConstants.primaryDarkColor,
           foregroundColor: Colors.white,
           elevation: 0,
         ),
@@ -235,12 +422,12 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
           color: AppConstants.cardColor,
           elevation: 1,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppConstants.primaryColor,
+            backgroundColor: AppConstants.accentColor,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -253,24 +440,13 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: AppConstants.backgroundColor,
+          fillColor: AppConstants.surfaceColor,
         ),
       ),
       home: Scaffold(
         body: IndexedStack(
-          index: _selectedIndex,
+          index: _navToStack[_selectedIndex] ?? 0,
           children: [
-            HomeScreen(
-              key: ValueKey(
-                'home_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
-              ),
-              pantryItems: _pantryItems,
-              onAddItem: _addPantryItem,
-              onUpdateItem: _updatePantryItem,
-              onEditItem: _editPantryItem,
-              useFirestore: EnvironmentConfig.useFirestore,
-              onTestFirestore: _testFirestoreConnection,
-            ),
             InventoryScreen(
               key: ValueKey(
                 'inventory_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
@@ -280,31 +456,41 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
               onDeleteItem: _deletePantryItem,
               onEditItem: (item) => _editPantryItem(item),
               onItemUpdated: _handleUpdatedItem,
+              filterMode: InventoryFilterMode.all,
+            ),
+            InventoryScreen(
+              key: ValueKey(
+                'alerts_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
+              ),
+              pantryItems: _pantryItems,
+              onAddItem: _addPantryItem,
+              onDeleteItem: _deletePantryItem,
+              onEditItem: (item) => _editPantryItem(item),
+              onItemUpdated: _handleUpdatedItem,
+              filterMode: InventoryFilterMode.alerts,
             ),
             SettingsScreen(
               key: ValueKey(
                 'settings_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
               ),
               useFirestore: EnvironmentConfig.useFirestore,
-              onFirestoreToggle: (value) {
-                // This will be handled by environment settings now
-              },
-              useOpenFoodFacts: true, // _useOpenFoodFacts removed
-              onApiToggle: (value) {
-                // setState(() {
-                //   _useOpenFoodFacts = value;
-                //   _initializeApiService();
-                // });
-              },
+              onFirestoreToggle: (value) {},
+              useOpenFoodFacts: true,
+              onApiToggle: (value) {},
             ),
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
           items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.kitchen), label: 'Pantry'),
             BottomNavigationBarItem(
-              icon: Icon(Icons.inventory),
-              label: 'Inventory',
+              icon: Icon(Icons.qr_code_scanner),
+              label: 'Scan',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.notifications_active),
+              label: 'Alerts',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),
@@ -312,77 +498,10 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
             ),
           ],
           currentIndex: _selectedIndex,
-          selectedItemColor: AppConstants.primaryColor,
+          selectedItemColor: AppConstants.accentColor,
+          unselectedItemColor: AppConstants.textSecondaryColor,
           onTap: _onItemTapped,
         ),
-        floatingActionButton:
-            _selectedIndex == 1
-                ? Builder(
-                  builder:
-                      (fabContext) => FloatingActionButton(
-                        onPressed: () async {
-                          // Scan barcode first
-                          final String? scannedBarcode =
-                              await Navigator.push<String>(
-                                fabContext,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => const BarcodeScannerScreen(),
-                                ),
-                              );
-                          if (scannedBarcode == null ||
-                              scannedBarcode.isEmpty) {
-                            return;
-                          }
-                          PantryItem? existingItem;
-                          for (final item in _pantryItems) {
-                            if (item.barcode == scannedBarcode) {
-                              existingItem = item;
-                              break;
-                            }
-                          }
-                          if (existingItem == null) {
-                            if (fabContext.mounted) {
-                              final PantryItem? newItem =
-                                  await Navigator.push<PantryItem>(
-                                    fabContext,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => AddItemScreen(
-                                            initialBarcode: scannedBarcode,
-                                            existingItems: _pantryItems,
-                                          ),
-                                    ),
-                                  );
-                              if (fabContext.mounted && newItem != null) {
-                                _addPantryItem(newItem);
-                              }
-                            }
-                            return;
-                          }
-                          final PantryItem item = existingItem;
-                          if (fabContext.mounted) {
-                            showDialog(
-                              context: fabContext,
-                              builder:
-                                  (context) => ItemQuantityDialog(
-                                    item: item,
-                                    onUpdateItem: _updatePantryItem,
-                                    onEditItem: _editPantryItem,
-                                  ),
-                            );
-                          }
-                          return;
-                        },
-                        backgroundColor: AppConstants.primaryColor,
-                        tooltip: 'Scan Barcode',
-                        child: const Icon(
-                          Icons.qr_code_scanner,
-                          color: Colors.white,
-                        ),
-                      ),
-                )
-                : null,
       ),
       routes: {
         '/add-item': (context) => const AddItemScreen(),
@@ -396,10 +515,26 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     );
   }
 
+  static MaterialColor _buildBrownSwatch() {
+    const primary = 0xFF5D4037;
+    return const MaterialColor(primary, <int, Color>{
+      50: Color(0xFFEFEBE9),
+      100: Color(0xFFD7CCC8),
+      200: Color(0xFFBCAAA4),
+      300: Color(0xFFA1887F),
+      400: Color(0xFF8D6E63),
+      500: Color(primary),
+      600: Color(0xFF546E7A),
+      700: Color(0xFF4E342E),
+      800: Color(0xFF3E2723),
+      900: Color(0xFF2C1810),
+    });
+  }
+
   @override
   void dispose() {
     DataServiceFactory.dispose();
-    _dataSubscription?.cancel(); // Cancel the subscription on dispose
+    _dataSubscription?.cancel();
     super.dispose();
   }
 }

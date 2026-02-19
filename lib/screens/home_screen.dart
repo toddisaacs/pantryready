@@ -282,7 +282,7 @@ class HomeScreen extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.1),
           child: Icon(
-            _getCategoryIcon(item.systemCategory),
+            AppConstants.categoryIcons[item.systemCategory],
             color: AppConstants.primaryColor,
           ),
         ),
@@ -447,30 +447,5 @@ class HomeScreen extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  IconData _getCategoryIcon(SystemCategory category) {
-    switch (category) {
-      case SystemCategory.water:
-        return Icons.water_drop;
-      case SystemCategory.food:
-        return Icons.restaurant;
-      case SystemCategory.medical:
-        return Icons.medical_services;
-      case SystemCategory.hygiene:
-        return Icons.cleaning_services;
-      case SystemCategory.tools:
-        return Icons.build;
-      case SystemCategory.lighting:
-        return Icons.lightbulb;
-      case SystemCategory.shelter:
-        return Icons.home;
-      case SystemCategory.communication:
-        return Icons.phone;
-      case SystemCategory.security:
-        return Icons.security;
-      case SystemCategory.other:
-        return Icons.inventory;
-    }
   }
 }

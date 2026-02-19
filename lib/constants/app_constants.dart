@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pantryready/models/pantry_item.dart';
 
+enum ScanMode { shelve, remove, check }
+
 class AppConstants {
   // App Version Information
   static const String appVersion = '2.0.0';
@@ -14,16 +16,19 @@ class AppConstants {
   static const String displayVersion = '$appName v$appVersion';
   static const String userAgent = '$appName/$appVersion';
 
-  // Colors
-  static const Color primaryColor = Color(0xFF4CAF50);
-  static const Color accentColor = Color(0xFF8BC34A);
-  static const Color backgroundColor = Color(0xFFF5F5F5);
-  static const Color cardColor = Colors.white;
-  static const Color successColor = Color(0xFF4CAF50);
-  static const Color errorColor = Color(0xFFF44336);
-  static const Color warningColor = Color(0xFFFF9800);
-  static const Color textColor = Colors.black87;
-  static const Color textSecondaryColor = Color(0xFF6C757D);
+  // Colors — warm pantry palette
+  static const Color primaryColor = Color(0xFF5D4037); // warm brown
+  static const Color primaryDarkColor = Color(0xFF3E2723);
+  static const Color primaryLightColor = Color(0xFF8B6B61);
+  static const Color accentColor = Color(0xFFE67E22); // warm amber CTA
+  static const Color backgroundColor = Color(0xFFFFF8F0); // warm off-white
+  static const Color cardColor = Color(0xFFFFFFFF);
+  static const Color surfaceColor = Color(0xFFF5EDE4); // warm beige
+  static const Color successColor = Color(0xFF27AE60);
+  static const Color errorColor = Color(0xFFE74C3C);
+  static const Color warningColor = Color(0xFFF39C12);
+  static const Color textColor = Color(0xFF2C1810); // dark brown
+  static const Color textSecondaryColor = Color(0xFF7B6B63);
 
   // Legacy categories for backward compatibility
   static const List<String> categories = [
@@ -58,6 +63,71 @@ class AppConstants {
     'sets',
     'kits',
   ];
+
+  // Centralized category colors
+  static const Map<SystemCategory, Color> categoryColors = {
+    SystemCategory.water: Color(0xFF2196F3),
+    SystemCategory.food: Color(0xFFFF9800),
+    SystemCategory.medical: Color(0xFFE74C3C),
+    SystemCategory.hygiene: Color(0xFF9C27B0),
+    SystemCategory.tools: Color(0xFF607D8B),
+    SystemCategory.lighting: Color(0xFFFFC107),
+    SystemCategory.shelter: Color(0xFF795548),
+    SystemCategory.communication: Color(0xFF4CAF50),
+    SystemCategory.security: Color(0xFF37474F),
+    SystemCategory.other: Color(0xFF5D4037),
+  };
+
+  // Centralized category icons
+  static const Map<SystemCategory, IconData> categoryIcons = {
+    SystemCategory.water: Icons.water_drop,
+    SystemCategory.food: Icons.restaurant,
+    SystemCategory.medical: Icons.medical_services,
+    SystemCategory.hygiene: Icons.cleaning_services,
+    SystemCategory.tools: Icons.build,
+    SystemCategory.lighting: Icons.lightbulb,
+    SystemCategory.shelter: Icons.home,
+    SystemCategory.communication: Icons.phone,
+    SystemCategory.security: Icons.security,
+    SystemCategory.other: Icons.inventory,
+  };
+
+  // Centralized subcategories per category
+  static const Map<SystemCategory, List<String>> subcategories = {
+    SystemCategory.food: [
+      'Canned Goods',
+      'Grains',
+      'Condiments',
+      'Snacks',
+      'Frozen Foods',
+      'Dairy',
+      'Produce',
+      'Meat',
+    ],
+    SystemCategory.water: ['Drinking Water', 'Purified Water', 'Spring Water'],
+    SystemCategory.medical: ['First Aid', 'Medications', 'Supplies'],
+    SystemCategory.hygiene: ['Personal Care', 'Cleaning', 'Sanitation'],
+    SystemCategory.tools: ['Hand Tools', 'Power Tools', 'Equipment'],
+    SystemCategory.lighting: ['Flashlights', 'Batteries', 'Candles'],
+    SystemCategory.shelter: ['Tents', 'Tarps', 'Sleeping Bags'],
+    SystemCategory.communication: ['Radios', 'Phones', 'Chargers'],
+    SystemCategory.security: ['Locks', 'Alarms', 'Safes'],
+    SystemCategory.other: ['Miscellaneous'],
+  };
+
+  // Smart default units per category
+  static const Map<SystemCategory, String> defaultUnits = {
+    SystemCategory.water: 'gallons',
+    SystemCategory.food: 'cans',
+    SystemCategory.medical: 'kits',
+    SystemCategory.hygiene: 'pieces',
+    SystemCategory.tools: 'pieces',
+    SystemCategory.lighting: 'pieces',
+    SystemCategory.shelter: 'pieces',
+    SystemCategory.communication: 'pieces',
+    SystemCategory.security: 'pieces',
+    SystemCategory.other: 'pieces',
+  };
 
   // Sample data for the enhanced PantryItem model
   static final List<PantryItem> samplePantryItems = [

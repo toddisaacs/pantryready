@@ -33,6 +33,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   String? _selectedSubcategory;
   DateTime? _selectedExpiryDate;
   bool _isLoading = false;
+  bool _showDetails = false;
   late ProductApiService _apiService;
 
   @override
@@ -40,15 +41,17 @@ class _AddItemScreenState extends State<AddItemScreen> {
     super.initState();
     _apiService = OpenFoodFactsService();
 
-    // Pre-fill barcode if provided
+    // Smart defaults
+    _quantityController.text = '1';
+    _selectedUnit =
+        AppConstants.defaultUnits[_selectedSystemCategory] ??
+        AppConstants.units.first;
+
     if (widget.initialBarcode != null) {
       _barcodeController.text = widget.initialBarcode!;
-
-      // Check if item already exists BEFORE fetching product details
       _checkForDuplicate(widget.initialBarcode!);
     }
 
-    // Pre-fill fields from suggested item if provided
     if (widget.suggestedItem != null) {
       final item = widget.suggestedItem!;
       _nameController.text = item.name;
@@ -57,7 +60,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
       _selectedUnit = item.unit;
       _selectedSystemCategory = item.systemCategory;
       _selectedSubcategory = item.subcategory;
-      // Note: We don't set expiry date from suggested item as it's now per batch
     }
   }
 
@@ -76,6 +78,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
           _nameController.text = result.name!;
           if (result.category != null) {
             _selectedSystemCategory = _mapToSystemCategory(result.category!);
+            _selectedUnit =
+                AppConstants.defaultUnits[_selectedSystemCategory] ??
+                _selectedUnit;
           }
           if (result.brand != null && result.brand!.isNotEmpty) {
             _notesController.text = 'Brand: ${result.brand}';
@@ -149,7 +154,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
       return SystemCategory.security;
     }
 
-    // Default to food for most items
     return SystemCategory.food;
   }
 
@@ -165,11 +169,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Item'),
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Add Item')),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -180,351 +180,265 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildBarcodeSection(),
+                      // Barcode chip (if present)
+                      if (_barcodeController.text.isNotEmpty &&
+                          widget.initialBarcode != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Chip(
+                            avatar: const Icon(
+                              Icons.qr_code,
+                              size: 18,
+                              color: AppConstants.textSecondaryColor,
+                            ),
+                            label: Text(_barcodeController.text),
+                            backgroundColor: AppConstants.surfaceColor,
+                          ),
+                        ),
+                      // Quick Add: Name
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Item Name',
+                          hintText: 'What are you adding?',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter an item name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      // Quick Add: Quantity + Unit (side by side)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _quantityController,
+                              decoration: const InputDecoration(
+                                labelText: 'Qty',
+                                hintText: '1',
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Required';
+                                }
+                                if (double.tryParse(value) == null) {
+                                  return 'Invalid';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedUnit,
+                              decoration: const InputDecoration(
+                                labelText: 'Unit',
+                              ),
+                              items:
+                                  AppConstants.units.map((unit) {
+                                    return DropdownMenuItem(
+                                      value: unit,
+                                      child: Text(unit),
+                                    );
+                                  }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedUnit = value!;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Quick Add: Category
+                      DropdownButtonFormField<SystemCategory>(
+                        value: _selectedSystemCategory,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                        ),
+                        items:
+                            SystemCategory.values.map((category) {
+                              return DropdownMenuItem(
+                                value: category,
+                                child: Row(
+                                  children: [
+                                    Text(category.emoji),
+                                    const SizedBox(width: 8),
+                                    Text(category.displayName),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSystemCategory = value!;
+                            _selectedSubcategory = null;
+                            _selectedUnit =
+                                AppConstants
+                                    .defaultUnits[_selectedSystemCategory] ??
+                                _selectedUnit;
+                          });
+                        },
+                      ),
                       const SizedBox(height: 16),
-                      _buildBasicInfoSection(),
-                      const SizedBox(height: 16),
-                      _buildCategorySection(),
-                      const SizedBox(height: 16),
-                      _buildQuantitySection(),
-                      const SizedBox(height: 16),
-                      _buildExpirySection(),
-                      const SizedBox(height: 16),
-                      _buildNotesSection(),
+                      // More Details (expandable)
+                      Theme(
+                        data: Theme.of(
+                          context,
+                        ).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          title: const Text(
+                            'More Details',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: AppConstants.textSecondaryColor,
+                            ),
+                          ),
+                          initiallyExpanded: _showDetails,
+                          onExpansionChanged: (expanded) {
+                            setState(() {
+                              _showDetails = expanded;
+                            });
+                          },
+                          tilePadding: EdgeInsets.zero,
+                          children: [
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              value: _selectedSubcategory,
+                              decoration: const InputDecoration(
+                                labelText: 'Subcategory (Optional)',
+                              ),
+                              items:
+                                  (AppConstants
+                                              .subcategories[_selectedSystemCategory] ??
+                                          ['Miscellaneous'])
+                                      .map((subcategory) {
+                                        return DropdownMenuItem(
+                                          value: subcategory,
+                                          child: Text(subcategory),
+                                        );
+                                      })
+                                      .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSubcategory = value;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            // Expiry date
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    readOnly: true,
+                                    decoration: InputDecoration(
+                                      labelText: 'Expiry Date',
+                                      hintText:
+                                          _selectedExpiryDate == null
+                                              ? 'Select date'
+                                              : _formatDate(
+                                                _selectedExpiryDate!,
+                                              ),
+                                      suffixIcon: IconButton(
+                                        icon: const Icon(Icons.calendar_today),
+                                        onPressed: () async {
+                                          final date = await showDatePicker(
+                                            context: context,
+                                            initialDate: DateTime.now().add(
+                                              const Duration(days: 365),
+                                            ),
+                                            firstDate: DateTime.now(),
+                                            lastDate: DateTime.now().add(
+                                              const Duration(days: 3650),
+                                            ),
+                                          );
+                                          if (date != null) {
+                                            setState(() {
+                                              _selectedExpiryDate = date;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedExpiryDate = null;
+                                    });
+                                  },
+                                  child: const Text('Clear'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _notesController,
+                              decoration: const InputDecoration(
+                                labelText: 'Notes',
+                                hintText: 'Add any additional notes',
+                              ),
+                              maxLines: 3,
+                            ),
+                            // Barcode (if not from scan)
+                            if (widget.initialBarcode == null) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _barcodeController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Barcode',
+                                        hintText: 'Enter or scan barcode',
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    onPressed: () async {
+                                      final barcode = await Navigator.push<
+                                        String
+                                      >(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) =>
+                                                  const BarcodeScannerScreen(),
+                                        ),
+                                      );
+                                      if (barcode != null) {
+                                        setState(() {
+                                          _barcodeController.text = barcode;
+                                        });
+                                        _checkForDuplicate(barcode);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.qr_code_scanner),
+                                    tooltip: 'Scan Barcode',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       _buildActionButtons(),
                     ],
                   ),
                 ),
               ),
-    );
-  }
-
-  Widget _buildBarcodeSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Barcode',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _barcodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Barcode',
-                      hintText: 'Enter or scan barcode',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () async {
-                    final barcode = await Navigator.push<String>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BarcodeScannerScreen(),
-                      ),
-                    );
-                    if (barcode != null) {
-                      setState(() {
-                        _barcodeController.text = barcode;
-                      });
-                      // Check for duplicate BEFORE fetching from API
-                      _checkForDuplicate(barcode);
-                    }
-                  },
-                  icon: const Icon(Icons.qr_code_scanner),
-                  tooltip: 'Scan Barcode',
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBasicInfoSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Basic Information',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Item Name',
-                hintText: 'Enter item name',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter an item name';
-                }
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategorySection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Category',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<SystemCategory>(
-              value: _selectedSystemCategory,
-              decoration: const InputDecoration(labelText: 'System Category'),
-              items:
-                  SystemCategory.values.map((category) {
-                    return DropdownMenuItem(
-                      value: category,
-                      child: Row(
-                        children: [
-                          Text(category.emoji),
-                          const SizedBox(width: 8),
-                          Text(category.displayName),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedSystemCategory = value!;
-                  _selectedSubcategory =
-                      null; // Reset subcategory when category changes
-                });
-              },
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _selectedSubcategory,
-              decoration: const InputDecoration(
-                labelText: 'Subcategory (Optional)',
-              ),
-              items:
-                  _getSubcategoriesForCategory(_selectedSystemCategory).map((
-                    subcategory,
-                  ) {
-                    return DropdownMenuItem(
-                      value: subcategory,
-                      child: Text(subcategory),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedSubcategory = value;
-                });
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  List<String> _getSubcategoriesForCategory(SystemCategory category) {
-    switch (category) {
-      case SystemCategory.food:
-        return [
-          'Canned Goods',
-          'Grains',
-          'Condiments',
-          'Snacks',
-          'Frozen Foods',
-          'Dairy',
-          'Produce',
-          'Meat',
-        ];
-      case SystemCategory.water:
-        return ['Drinking Water', 'Purified Water', 'Spring Water'];
-      case SystemCategory.medical:
-        return ['First Aid', 'Medications', 'Supplies'];
-      case SystemCategory.hygiene:
-        return ['Personal Care', 'Cleaning', 'Sanitation'];
-      case SystemCategory.tools:
-        return ['Hand Tools', 'Power Tools', 'Equipment'];
-      case SystemCategory.lighting:
-        return ['Flashlights', 'Batteries', 'Candles'];
-      case SystemCategory.shelter:
-        return ['Tents', 'Tarps', 'Sleeping Bags'];
-      case SystemCategory.communication:
-        return ['Radios', 'Phones', 'Chargers'];
-      case SystemCategory.security:
-        return ['Locks', 'Alarms', 'Safes'];
-      case SystemCategory.other:
-        return ['Miscellaneous'];
-    }
-  }
-
-  Widget _buildQuantitySection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Quantity',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _quantityController,
-                    decoration: const InputDecoration(
-                      labelText: 'Quantity',
-                      hintText: 'Enter quantity',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a quantity';
-                      }
-                      if (double.tryParse(value) == null) {
-                        return 'Please enter a valid number';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedUnit,
-                    decoration: const InputDecoration(labelText: 'Unit'),
-                    items:
-                        AppConstants.units.map((unit) {
-                          return DropdownMenuItem(
-                            value: unit,
-                            child: Text(unit),
-                          );
-                        }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedUnit = value!;
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExpirySection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Expiry Date',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      labelText: 'Expiry Date',
-                      hintText:
-                          _selectedExpiryDate == null
-                              ? 'Select date'
-                              : _formatDate(_selectedExpiryDate!),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.calendar_today),
-                        onPressed: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now().add(
-                              const Duration(days: 365),
-                            ),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 3650),
-                            ),
-                          );
-                          if (date != null) {
-                            setState(() {
-                              _selectedExpiryDate = date;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedExpiryDate = null;
-                    });
-                  },
-                  child: const Text('Clear'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotesSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Notes',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                hintText: 'Add any additional notes',
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -535,8 +449,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
           child: ElevatedButton(
             onPressed: _saveItem,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryColor,
-              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             child: const Text('Save Item'),
@@ -560,7 +472,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (_formKey.currentState!.validate()) {
       final quantity = double.parse(_quantityController.text);
 
-      // Create initial batch
       final initialBatch = ItemBatch(
         quantity: quantity,
         purchaseDate: DateTime.now(),
@@ -569,7 +480,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
         notes: _notesController.text.isNotEmpty ? _notesController.text : null,
       );
 
-      // Create the new PantryItem
       final newItem = PantryItem(
         name: _nameController.text,
         unit: _selectedUnit,
@@ -579,12 +489,11 @@ class _AddItemScreenState extends State<AddItemScreen> {
         barcode:
             _barcodeController.text.isNotEmpty ? _barcodeController.text : null,
         notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-        // Set reasonable defaults for survival/preparedness fields
         dailyConsumptionRate: _getDefaultConsumptionRate(
           _selectedSystemCategory,
         ),
-        minStockLevel: quantity * 0.5, // 50% of current quantity
-        maxStockLevel: quantity * 3.0, // 3x current quantity
+        minStockLevel: quantity * 0.5,
+        maxStockLevel: quantity * 3.0,
         isEssential:
             _selectedSystemCategory == SystemCategory.water ||
             _selectedSystemCategory == SystemCategory.medical,
@@ -597,20 +506,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   void _checkForDuplicate(String barcode) {
     debugPrint('=== Checking for duplicate barcode: "$barcode" ===');
-    debugPrint('existingItems is null: ${widget.existingItems == null}');
-    debugPrint('existingItems count: ${widget.existingItems?.length ?? 0}');
 
-    if (barcode.isEmpty || widget.existingItems == null) {
-      debugPrint('Skipping check - barcode empty or no existing items');
-      return;
-    }
-
-    // Debug: print all existing barcodes
-    for (var item in widget.existingItems!) {
-      debugPrint(
-        '  Existing item: "${item.name}" with barcode: "${item.barcode}"',
-      );
-    }
+    if (barcode.isEmpty || widget.existingItems == null) return;
 
     final duplicate = widget.existingItems!.firstWhere(
       (item) => item.barcode == barcode,
@@ -622,11 +519,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
           ),
     );
 
-    debugPrint('Duplicate found: ${duplicate.name.isNotEmpty}');
-    debugPrint('Duplicate name: "${duplicate.name}"');
-
     if (duplicate.name.isNotEmpty) {
-      // Found a duplicate! Pre-fill form with existing item data
       setState(() {
         _nameController.text = duplicate.name;
         _quantityController.text = duplicate.totalQuantity.toString();
@@ -636,14 +529,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
         _selectedSubcategory = duplicate.subcategory;
       });
 
-      // Show dialog immediately after build
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _showDuplicateDialog(duplicate);
         }
       });
     } else {
-      // No duplicate - fetch product details from API
       _fetchProductDetails(barcode);
     }
   }
@@ -651,7 +542,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   void _showDuplicateDialog(PantryItem existingItem) {
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing by tapping outside
+      barrierDismissible: false,
       builder:
           (context) => AlertDialog(
             title: const Text('Item Already Exists'),
@@ -664,13 +555,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
             actions: [
               ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Close add screen
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
                 child: const Text('OK'),
               ),
             ],
@@ -681,15 +568,15 @@ class _AddItemScreenState extends State<AddItemScreen> {
   double? _getDefaultConsumptionRate(SystemCategory category) {
     switch (category) {
       case SystemCategory.water:
-        return 3.0; // 3 liters per person per day
+        return 3.0;
       case SystemCategory.food:
-        return 2.0; // 2 lbs per person per day
+        return 2.0;
       case SystemCategory.medical:
-        return 0.01; // Very low consumption
+        return 0.01;
       case SystemCategory.hygiene:
-        return 0.5; // 0.5 units per person per day
+        return 0.5;
       default:
-        return null; // No default consumption rate
+        return null;
     }
   }
 
