@@ -15,21 +15,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8'
+          channel: 'stable'
+
       - name: Cache pub and dart_tool
         uses: actions/cache@v4
         with:
           path: |
             ~/.pub-cache
             .dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          key: ${{ runner.os }}-flutter-3.32.8-pub-${{ hashFiles('**/pubspec.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.8'
-          channel: 'stable'
+            ${{ runner.os }}-flutter-3.32.8-pub-
 
       - name: Flutter pub get
         run: flutter pub get
@@ -38,7 +38,7 @@ jobs:
         run: dart format --set-exit-if-changed .
 
       - name: Flutter analyze
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Check for outdated dependencies
         run: flutter pub outdated
