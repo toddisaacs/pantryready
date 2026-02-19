@@ -226,7 +226,7 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
         primaryColor: AppConstants.primaryColor,
         scaffoldBackgroundColor: AppConstants.backgroundColor,
         fontFamily: 'Roboto', // Use Roboto as fallback font
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: AppConstants.primaryColor,
           foregroundColor: Colors.white,
           elevation: 0,

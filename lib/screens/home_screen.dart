@@ -49,18 +49,18 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildWelcomeSection() {
-    return Card(
+    return const Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.kitchen, size: 32, color: AppConstants.primaryColor),
-                const SizedBox(width: 12),
-                const Expanded(
+                SizedBox(width: 12),
+                Expanded(
                   child: Text(
                     'Welcome to PantryReady!',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -68,7 +68,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Keep track of your pantry items and never run out of essentials.',
               style: TextStyle(
@@ -112,7 +112,7 @@ class HomeScreen extends StatelessWidget {
               useFirestore
                   ? 'Data is stored in Firebase Firestore cloud database'
                   : 'Data is stored locally on this device',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: AppConstants.textSecondaryColor,
               ),
@@ -247,7 +247,7 @@ class HomeScreen extends StatelessWidget {
             ),
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 color: AppConstants.textSecondaryColor,
               ),
@@ -295,7 +295,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             if (item.isEssential)
-              Icon(Icons.priority_high, color: Colors.red, size: 16),
+              const Icon(Icons.priority_high, color: Colors.red, size: 16),
           ],
         ),
         subtitle: Column(
@@ -305,7 +305,7 @@ class HomeScreen extends StatelessWidget {
             if (item.subcategory != null && item.subcategory!.isNotEmpty)
               Text(
                 item.subcategory!,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppConstants.textSecondaryColor,
                 ),

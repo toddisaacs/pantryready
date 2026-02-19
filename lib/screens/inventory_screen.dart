@@ -288,10 +288,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
             ),
             if (item.isEssential)
-              Icon(Icons.priority_high, color: Colors.red, size: 16),
-            if (isLowStock) Icon(Icons.warning, color: Colors.orange, size: 16),
+              const Icon(Icons.priority_high, color: Colors.red, size: 16),
+            if (isLowStock)
+              const Icon(Icons.warning, color: Colors.orange, size: 16),
             if (isExpiringSoon)
-              Icon(Icons.schedule, color: Colors.red, size: 16),
+              const Icon(Icons.schedule, color: Colors.red, size: 16),
           ],
         ),
         subtitle: Column(
@@ -301,7 +302,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             if (item.subcategory != null && item.subcategory!.isNotEmpty)
               Text(
                 item.subcategory!,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppConstants.textSecondaryColor,
                 ),
@@ -381,7 +382,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.search_off,
             size: 64,
             color: AppConstants.textSecondaryColor,
@@ -391,7 +392,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             _searchQuery.isNotEmpty || _selectedCategory != null
                 ? 'No items found'
                 : 'No items in your pantry',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               color: AppConstants.textSecondaryColor,
             ),
@@ -401,7 +402,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             _searchQuery.isNotEmpty || _selectedCategory != null
                 ? 'Try adjusting your search or filters'
                 : 'Add your first item to get started',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: AppConstants.textSecondaryColor,
             ),

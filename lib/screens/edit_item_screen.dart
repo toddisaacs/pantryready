@@ -391,7 +391,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       final quantity = double.parse(_quantityController.text);
 
       // Update existing batches or create a new one
-      List<ItemBatch> updatedBatches = List.from(widget.item.batches);
+      final List<ItemBatch> updatedBatches = List.from(widget.item.batches);
 
       // If there's a quantity change and batches exist, update the most recent batch
       if (updatedBatches.isNotEmpty && quantity != widget.item.totalQuantity) {

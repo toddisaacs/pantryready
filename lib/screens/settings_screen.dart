@@ -64,7 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   backgroundColor: AppConstants.primaryColor.withValues(
                     alpha: 0.1,
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.person,
                     size: 32,
                     color: AppConstants.primaryColor,
@@ -118,8 +118,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
+          const Padding(
+            padding: EdgeInsets.all(20.0),
             child: Text(
               'Preferences',
               style: TextStyle(
@@ -191,8 +191,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
+          const Padding(
+            padding: EdgeInsets.all(20.0),
             child: Text(
               'Data & Storage',
               style: TextStyle(
@@ -265,7 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(20.0),
             child: Row(
               children: [
-                Text(
+                const Text(
                   'Environment & Data',
                   style: TextStyle(
                     fontSize: 18,
@@ -326,8 +326,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
+          const Padding(
+            padding: EdgeInsets.all(20.0),
             child: Text(
               'About',
               style: TextStyle(
@@ -411,7 +411,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text(language),
       trailing:
           _selectedLanguage == language
-              ? Icon(Icons.check, color: AppConstants.primaryColor)
+              ? const Icon(Icons.check, color: AppConstants.primaryColor)
               : null,
       onTap: () {
         setState(() {

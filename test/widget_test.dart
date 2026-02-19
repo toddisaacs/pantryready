@@ -19,7 +19,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: HomeScreen(
-          pantryItems: [],
+          pantryItems: const [],
           onAddItem: (item) {},
           onUpdateItem: (item) {},
           onEditItem: (item) {},

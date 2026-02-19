@@ -11,7 +11,7 @@ void main() {
       const testBarcode = '1234567890123';
 
       await tester.pumpWidget(
-        MaterialApp(home: AddItemScreen(initialBarcode: testBarcode)),
+        const MaterialApp(home: AddItemScreen(initialBarcode: testBarcode)),
       );
 
       // Wait for the widget to fully build
@@ -53,7 +53,7 @@ void main() {
       const testBarcode = '1234567890123';
 
       await tester.pumpWidget(
-        MaterialApp(home: AddItemScreen(initialBarcode: testBarcode)),
+        const MaterialApp(home: AddItemScreen(initialBarcode: testBarcode)),
       );
 
       // Wait for the widget to fully build
@@ -212,7 +212,7 @@ void main() {
       WidgetTester tester,
     ) async {
       // Test the AddItemScreen directly to check for barcode scanner button
-      await tester.pumpWidget(MaterialApp(home: AddItemScreen()));
+      await tester.pumpWidget(const MaterialApp(home: AddItemScreen()));
 
       // Verify barcode scanner button is present in the form
       expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);

@@ -90,13 +90,17 @@ class InventoryItemDetailScreen extends StatelessWidget {
                         ),
                       ),
                       if (item.isEssential)
-                        Icon(Icons.priority_high, color: Colors.red, size: 24),
+                        const Icon(
+                          Icons.priority_high,
+                          color: Colors.red,
+                          size: 24,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${item.totalQuantity.toStringAsFixed(1)} ${item.unit}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       color: AppConstants.textSecondaryColor,
                     ),
@@ -104,7 +108,7 @@ class InventoryItemDetailScreen extends StatelessWidget {
                   if (item.subcategory != null && item.subcategory!.isNotEmpty)
                     Text(
                       item.subcategory!,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppConstants.textSecondaryColor,
                       ),
@@ -245,7 +249,7 @@ class InventoryItemDetailScreen extends StatelessWidget {
               if (batch.costPerUnit != null)
                 Text(
                   '\$${(batch.costPerUnit! * batch.quantity).toStringAsFixed(2)}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppConstants.textSecondaryColor,
                     fontSize: 12,
                   ),
@@ -255,7 +259,7 @@ class InventoryItemDetailScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Purchased: ${_formatDate(batch.purchaseDate)}',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               color: AppConstants.textSecondaryColor,
             ),
@@ -283,7 +287,7 @@ class InventoryItemDetailScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               batch.notes!,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 color: AppConstants.textSecondaryColor,
                 fontStyle: FontStyle.italic,
@@ -334,7 +338,7 @@ class InventoryItemDetailScreen extends StatelessWidget {
                         backgroundColor: AppConstants.primaryColor.withValues(
                           alpha: 0.1,
                         ),
-                        labelStyle: TextStyle(
+                        labelStyle: const TextStyle(
                           color: AppConstants.primaryColor,
                           fontSize: 12,
                         ),

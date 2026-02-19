@@ -134,7 +134,10 @@ class _EnvironmentSettingsScreenState extends State<EnvironmentSettingsScreen> {
         ),
         trailing:
             isSelected
-                ? Icon(Icons.check_circle, color: AppConstants.primaryColor)
+                ? const Icon(
+                  Icons.check_circle,
+                  color: AppConstants.primaryColor,
+                )
                 : null,
         onTap: () => _selectEnvironment(environment),
       ),

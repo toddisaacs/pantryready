@@ -89,7 +89,9 @@ class MockProductApiService implements ProductApiService {
   // Helper method to create a PantryItem from API result
   PantryItem createPantryItemFromApiResult(ProductApiResult result) {
     // Map external category to system category
-    SystemCategory systemCategory = _mapToSystemCategory(result.category ?? '');
+    final SystemCategory systemCategory = _mapToSystemCategory(
+      result.category ?? '',
+    );
 
     // Create initial batch
     final initialBatch = ItemBatch(
