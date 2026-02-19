@@ -29,6 +29,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-flutter-3.32.8-pub-
 
+      - name: Create Firebase options from template
+        run: cp lib/firebase_options_template.dart lib/firebase_options.dart
+
       - name: Flutter pub get
         run: flutter pub get
 
