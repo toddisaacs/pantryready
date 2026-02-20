@@ -22,13 +22,11 @@ class ItemQuantityDialog extends StatefulWidget {
 
 class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
   final TextEditingController _quantityController = TextEditingController();
-  String _selectedUnit = '';
   bool _isAddMode = true;
 
   @override
   void initState() {
     super.initState();
-    _selectedUnit = widget.item.unit;
     _quantityController.text = '1';
     if (widget.initialAddMode != null) {
       _isAddMode = widget.initialAddMode!;
@@ -97,19 +95,36 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedUnit,
-                  decoration: const InputDecoration(labelText: 'Unit'),
-                  items:
-                      AppConstants.units.map((unit) {
-                        return DropdownMenuItem(value: unit, child: Text(unit));
-                      }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedUnit = value!;
-                    });
-                  },
+              // Unit is fixed at item creation — show it as context only.
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: AppConstants.surfaceColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Unit',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppConstants.textSecondaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.item.unit,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: AppConstants.textColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -329,8 +344,8 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
       SnackBar(
         content: Text(
           _isAddMode
-              ? 'Added ${quantity.toStringAsFixed(1)} $_selectedUnit of ${widget.item.name}'
-              : 'Removed ${quantity.toStringAsFixed(1)} $_selectedUnit of ${widget.item.name}',
+              ? 'Added ${quantity.toStringAsFixed(1)} ${widget.item.unit} of ${widget.item.name}'
+              : 'Removed ${quantity.toStringAsFixed(1)} ${widget.item.unit} of ${widget.item.name}',
         ),
         backgroundColor: _isAddMode ? AppConstants.successColor : Colors.orange,
       ),
