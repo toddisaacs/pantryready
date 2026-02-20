@@ -115,39 +115,119 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _isAddMode = true;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        _isAddMode ? AppConstants.primaryColor : Colors.grey,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Add'),
-                ),
+          // Segmented toggle — visually grouped so it reads as "pick one",
+          // not as action buttons.
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppConstants.textSecondaryColor.withValues(alpha: 0.25),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _isAddMode = false;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: !_isAddMode ? Colors.red : Colors.grey,
-                    foregroundColor: Colors.white,
+              color: AppConstants.surfaceColor,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isAddMode = true),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      decoration: BoxDecoration(
+                        color:
+                            _isAddMode
+                                ? AppConstants.successColor
+                                : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(7),
+                          bottomLeft: Radius.circular(7),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add,
+                            size: 16,
+                            color:
+                                _isAddMode
+                                    ? Colors.white
+                                    : AppConstants.textSecondaryColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Add to stock',
+                            style: TextStyle(
+                              color:
+                                  _isAddMode
+                                      ? Colors.white
+                                      : AppConstants.textSecondaryColor,
+                              fontWeight:
+                                  _isAddMode
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: const Text('Remove'),
                 ),
-              ),
-            ],
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: AppConstants.textSecondaryColor.withValues(alpha: 0.2),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isAddMode = false),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      decoration: BoxDecoration(
+                        color:
+                            !_isAddMode
+                                ? AppConstants.errorColor
+                                : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(7),
+                          bottomRight: Radius.circular(7),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.remove,
+                            size: 16,
+                            color:
+                                !_isAddMode
+                                    ? Colors.white
+                                    : AppConstants.textSecondaryColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Remove stock',
+                            style: TextStyle(
+                              color:
+                                  !_isAddMode
+                                      ? Colors.white
+                                      : AppConstants.textSecondaryColor,
+                              fontWeight:
+                                  !_isAddMode
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
