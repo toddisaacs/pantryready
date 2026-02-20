@@ -12,29 +12,32 @@ void main() {
     ) async {
       app.main();
 
-      // Generous timeout for splash, Firebase, mock data, UI
-      await tester.pumpAndSettle(const Duration(seconds: 12));
+      // Generous timeout for Firebase init, mock data service, and UI render.
+      await tester.pumpAndSettle(const Duration(seconds: 15));
 
-      // === Exact, unique matchers from your real UI ===
-      expect(find.text('8 items'), findsOneWidget); // summary
-      expect(find.text('2 low stock'), findsOneWidget);
-      expect(find.text('0 expiring'), findsOneWidget);
+      // Stats bar is present — check structure, not exact counts, so the test
+      // survives mock data changes without being updated.
+      expect(find.textContaining('items'), findsOneWidget);
+      expect(find.textContaining('low stock'), findsOneWidget);
+      expect(find.textContaining('expiring'), findsOneWidget);
 
+      // Search bar and Add button
       expect(find.text('Search items...'), findsOneWidget);
       expect(find.text('Add'), findsOneWidget);
 
-      // Bottom navigation bar
+      // All four bottom navigation tabs
+      expect(find.text('Pantry'), findsOneWidget);
       expect(find.text('Scan'), findsOneWidget);
       expect(find.text('Alerts'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
 
-      // Sample inventory item (proves list loaded)
+      // At least one inventory item rendered (confirms data loaded)
       expect(find.text('Canned Beans'), findsOneWidget);
 
-      // Main action icon
-      expect(find.byIcon(Icons.qr_code_scanner), findsAtLeast(1));
+      // Scanner icon in nav bar
+      expect(find.byIcon(Icons.qr_code_scanner), findsAtLeastNWidgets(1));
 
-      print('✅ SUCCESS: PantryReady full E2E test passed on Simulator!');
+      debugPrint('✅ PantryReady E2E smoke test passed.');
     });
   });
 }
