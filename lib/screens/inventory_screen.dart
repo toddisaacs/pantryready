@@ -6,6 +6,8 @@ import 'package:pantryready/screens/add_item_screen.dart';
 
 enum InventoryFilterMode { all, alerts }
 
+enum _ViewMode { summary, detail }
+
 class InventoryScreen extends StatefulWidget {
   final List<PantryItem> pantryItems;
   final Function(PantryItem?) onAddItem;
@@ -32,6 +34,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   SystemCategory? _selectedCategory;
+  _ViewMode _viewMode = _ViewMode.summary;
 
   bool get _isAlerts => widget.filterMode == InventoryFilterMode.alerts;
 
@@ -220,7 +223,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Icon(
+                  _viewMode == _ViewMode.summary
+                      ? Icons.format_list_bulleted
+                      : Icons.layers,
+                ),
+                tooltip: _viewMode == _ViewMode.summary
+                    ? 'Detail view'
+                    : 'Summary view',
+                onPressed: () => setState(() {
+                  _viewMode = _viewMode == _ViewMode.summary
+                      ? _ViewMode.detail
+                      : _ViewMode.summary;
+                }),
+              ),
+              const SizedBox(width: 4),
               ElevatedButton.icon(
                 onPressed: () async {
                   final newItem = await Navigator.push<PantryItem>(
@@ -325,10 +344,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildInventoryList() {
-    if (_isAlerts) {
-      return _buildAlertsList();
-    }
+    if (_isAlerts) return _buildAlertsList();
+    if (_viewMode == _ViewMode.summary) return _buildSummaryList();
+    return _buildDetailList();
+  }
 
+  Widget _buildDetailList() {
     // Group items by system category
     final Map<SystemCategory, List<PantryItem>> grouped = {};
     for (final item in _filteredItems) {
@@ -364,6 +385,159 @@ class _InventoryScreenState extends State<InventoryScreen> {
         }
         return const SizedBox.shrink();
       },
+    );
+  }
+
+  Widget _buildSummaryList() {
+    final Map<SystemCategory, List<PantryItem>> byCat = {};
+    for (final item in _filteredItems) {
+      byCat.putIfAbsent(item.systemCategory, () => []).add(item);
+    }
+    final sortedCategories = byCat.keys.toList()
+      ..sort((a, b) => a.displayName.compareTo(b.displayName));
+
+    final widgets = <Widget>[];
+    for (final cat in sortedCategories) {
+      final nameGroups = <String, List<PantryItem>>{};
+      for (final item in byCat[cat]!) {
+        nameGroups
+            .putIfAbsent(item.name.toLowerCase().trim(), () => [])
+            .add(item);
+      }
+      final sortedGroups = nameGroups.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key));
+
+      widgets.add(_buildCategoryHeader(cat, sortedGroups.length));
+      for (final entry in sortedGroups) {
+        final items = entry.value;
+        if (items.length == 1) {
+          widgets.add(_buildInventoryItemTile(items.first));
+        } else {
+          widgets.add(_buildNameGroupTile(items));
+        }
+      }
+    }
+
+    return ListView(padding: const EdgeInsets.all(16.0), children: widgets);
+  }
+
+  Widget _buildNameGroupTile(List<PantryItem> items) {
+    final totalQty = items.fold(0.0, (sum, i) => sum + i.totalQuantity);
+    final unit = items.first.unit;
+    final subcategory = items.first.subcategory;
+    final hasLowStock = items.any((i) => i.isLowStock);
+    final hasExpiring = items.any((i) => i.hasExpiringItems);
+    final categoryColor =
+        AppConstants.categoryColors[items.first.systemCategory] ??
+        AppConstants.primaryColor;
+
+    final totalMax = items.fold(0.0, (s, i) => s + (i.maxStockLevel ?? 0.0));
+    final stockPercent =
+        totalMax > 0 ? (totalQty / totalMax).clamp(0.0, 1.0) : 1.0;
+    final barColor = stockPercent > 0.6
+        ? AppConstants.successColor
+        : stockPercent > 0.3
+        ? AppConstants.warningColor
+        : AppConstants.errorColor;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 1,
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          title: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(width: 4, color: categoryColor),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                items.first.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: AppConstants.textColor,
+                                ),
+                              ),
+                            ),
+                            _buildBadge(
+                              '${items.length} items',
+                              AppConstants.primaryColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              items.first.systemCategory.emoji,
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${totalQty.toStringAsFixed(1)} $unit',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppConstants.textSecondaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: stockPercent,
+                            backgroundColor: AppConstants.surfaceColor,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(barColor),
+                            minHeight: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            if (subcategory != null && subcategory.isNotEmpty)
+                              Text(
+                                subcategory,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppConstants.textSecondaryColor,
+                                ),
+                              ),
+                            const Spacer(),
+                            if (hasLowStock)
+                              _buildBadge(
+                                'Low Stock',
+                                AppConstants.warningColor,
+                              ),
+                            if (hasLowStock && hasExpiring)
+                              const SizedBox(width: 6),
+                            if (hasExpiring)
+                              _buildBadge(
+                                'Expiring',
+                                AppConstants.errorColor,
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          children: items.map(_buildInventoryItemTile).toList(),
+        ),
+      ),
     );
   }
 

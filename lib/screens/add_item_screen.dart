@@ -72,10 +72,17 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
     try {
       final result = await _apiService.lookupProduct(barcode);
+      debugPrint(
+        '[AddItem] lookup result — found:${result.found} '
+        'name:${result.name} category:${result.category} '
+        'brand:${result.brand} error:${result.errorMessage}',
+      );
 
-      if (result.found && result.name != null) {
+      if (result.found) {
         setState(() {
-          _nameController.text = result.name!;
+          if (result.name != null) {
+            _nameController.text = _normalizeName(result.name!);
+          }
           if (result.category != null) {
             _selectedSystemCategory = _mapToSystemCategory(result.category!);
             _selectedUnit =
@@ -88,18 +95,29 @@ class _AddItemScreenState extends State<AddItemScreen> {
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Found product: ${result.name}'),
-              backgroundColor: AppConstants.successColor,
-            ),
-          );
+          if (result.name != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Found product: ${result.name}'),
+                backgroundColor: AppConstants.successColor,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Product found — enter the name manually',
+                ),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
       } else if (result.errorMessage != null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('API Error: ${result.errorMessage}'),
+              content: Text('Lookup error: ${result.errorMessage}'),
               backgroundColor: Colors.orange,
             ),
           );
@@ -134,8 +152,11 @@ class _AddItemScreenState extends State<AddItemScreen> {
     final category = externalCategory.toLowerCase();
 
     if (category.contains('water') ||
-        category.contains('beverage') ||
-        category.contains('drink')) {
+        category.contains('waters') ||
+        category.contains('mineral-water') ||
+        category.contains('drinking-water') ||
+        (category.contains('beverage') &&
+            !category.contains('food-and-beverage'))) {
       return SystemCategory.water;
     } else if (category.contains('medical') || category.contains('health')) {
       return SystemCategory.medical;
@@ -390,46 +411,56 @@ class _AddItemScreenState extends State<AddItemScreen> {
                               ),
                               maxLines: 3,
                             ),
-                            // Barcode (if not from scan)
-                            if (widget.initialBarcode == null) ...[
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: _barcodeController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Barcode',
-                                        hintText: 'Enter or scan barcode',
-                                      ),
+                            // Barcode — always editable so misreads can be corrected
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _barcodeController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Barcode',
+                                      hintText: 'Enter or scan barcode',
                                     ),
+                                    keyboardType: TextInputType.number,
                                   ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    onPressed: () async {
-                                      final barcode = await Navigator.push<
-                                        String
-                                      >(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) =>
-                                                  const BarcodeScannerScreen(),
-                                        ),
-                                      );
-                                      if (barcode != null) {
-                                        setState(() {
-                                          _barcodeController.text = barcode;
-                                        });
-                                        _checkForDuplicate(barcode);
-                                      }
-                                    },
-                                    icon: const Icon(Icons.qr_code_scanner),
-                                    tooltip: 'Scan Barcode',
-                                  ),
-                                ],
-                              ),
-                            ],
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  onPressed: () {
+                                    final barcode =
+                                        _barcodeController.text.trim();
+                                    if (barcode.isNotEmpty) {
+                                      _fetchProductDetails(barcode);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.search),
+                                  tooltip: 'Look up barcode',
+                                ),
+                                IconButton(
+                                  onPressed: () async {
+                                    final barcode = await Navigator.push<
+                                      String
+                                    >(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                const BarcodeScannerScreen(),
+                                      ),
+                                    );
+                                    if (barcode != null) {
+                                      setState(() {
+                                        _barcodeController.text = barcode;
+                                      });
+                                      _checkForDuplicate(barcode);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.qr_code_scanner),
+                                  tooltip: 'Scan Barcode',
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -628,6 +659,16 @@ class _AddItemScreenState extends State<AddItemScreen> {
       default:
         return [SurvivalScenario.powerOutage];
     }
+  }
+
+  /// Converts all-caps names (common in OpenFoodFacts) to title case.
+  /// Mixed-case names are returned unchanged.
+  String _normalizeName(String name) {
+    if (name != name.toUpperCase()) return name;
+    return name.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
   }
 
   String _formatDate(DateTime date) {

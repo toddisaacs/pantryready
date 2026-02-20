@@ -95,14 +95,16 @@ class AppConstants {
   // Centralized subcategories per category
   static const Map<SystemCategory, List<String>> subcategories = {
     SystemCategory.food: [
+      'Vegetables',
+      'Legumes & Beans',
+      'Meat & Poultry',
+      'Grains & Pasta',
+      'Dairy',
+      'Produce',
       'Canned Goods',
-      'Grains',
       'Condiments',
       'Snacks',
       'Frozen Foods',
-      'Dairy',
-      'Produce',
-      'Meat',
     ],
     SystemCategory.water: ['Drinking Water', 'Purified Water', 'Spring Water'],
     SystemCategory.medical: ['First Aid', 'Medications', 'Supplies'],

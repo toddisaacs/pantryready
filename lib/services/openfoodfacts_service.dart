@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:pantryready/models/product_api_result.dart';
 import 'package:pantryready/services/product_api_service.dart';
@@ -13,11 +14,26 @@ class OpenFoodFactsService implements ProductApiService {
   Future<ProductApiResult> lookupProduct(String barcode) async {
     try {
       final url = Uri.parse('$_baseUrl/$barcode.json');
-      final response = await http.get(url);
+      debugPrint('[OFF] Requesting: $url');
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'User-Agent': 'PantryReady/2.0 (Flutter; pantryready-app)',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      debugPrint('[OFF] Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return _parseProductData(data, barcode);
+      } else if (response.statusCode == 429) {
+        debugPrint('[OFF] Rate limited (429) for barcode $barcode');
+        return ProductApiResult.error(
+          'Rate limited — wait a moment and try again',
+          barcode: barcode,
+        );
       } else {
         return ProductApiResult.error(
           'HTTP Error: ${response.statusCode}',
@@ -67,33 +83,46 @@ class OpenFoodFactsService implements ProductApiService {
   }
 
   String? _extractName(Map<String, dynamic> product) {
-    // Try multiple possible name fields
-    return product['product_name'] ??
-        product['generic_name'] ??
+    // Try English/generic fields first, then any localized product_name_* field
+    final direct = product['product_name'] ??
         product['product_name_en'] ??
-        product['generic_name_en'];
+        product['generic_name'] ??
+        product['generic_name_en'] ??
+        product['abbreviated_product_name'];
+    if (direct != null) return direct.toString();
+
+    // Fall back to any non-empty product_name_* locale field
+    for (final key in product.keys) {
+      if (key.startsWith('product_name_') && product[key] != null) {
+        final value = product[key].toString().trim();
+        if (value.isNotEmpty) return value;
+      }
+    }
+    return null;
   }
 
   String? _extractCategory(Map<String, dynamic> product) {
-    // Try multiple possible category fields
-    final categories = product['categories'];
-    if (categories != null) return categories.toString();
-
-    final categoriesTags = product['categories_tags'] as List<dynamic>?;
-    if (categoriesTags != null && categoriesTags.isNotEmpty) {
-      final firstTag = categoriesTags.first.toString();
-      if (firstTag.contains(':')) {
-        return firstTag.split(':').last;
-      }
+    // Most-specific structured tag (last = most specific in OFF taxonomy)
+    final tags = product['categories_tags'] as List<dynamic>?;
+    if (tags != null && tags.isNotEmpty) {
+      final lastTag = tags.last.toString();
+      final extracted =
+          lastTag.contains(':') ? lastTag.split(':').last : lastTag;
+      debugPrint('[OFF] category_tag (last): $extracted');
+      return extracted;
     }
 
-    final productCategory = product['product_category'];
-    if (productCategory != null) return productCategory.toString();
+    // Free-text fallback — last comma-token is most specific
+    final categories = product['categories'];
+    if (categories != null) {
+      final parts = categories.toString().split(',');
+      final extracted = parts.last.trim();
+      debugPrint('[OFF] category (free-text fallback): $extracted');
+      return extracted;
+    }
 
-    final mainCategory = product['main_category'];
-    if (mainCategory != null) return mainCategory.toString();
-
-    return null;
+    return product['product_category']?.toString() ??
+        product['main_category']?.toString();
   }
 
   String? _extractBrand(Map<String, dynamic> product) {
