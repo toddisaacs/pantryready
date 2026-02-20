@@ -1,0 +1,30 @@
+#!/bin/bash
+# Pre-push hook for Flutter projects
+# Runs format, analyze, and tests before allowing a push.
+
+set -e
+
+echo "Running pre-push checks..."
+
+# Format check
+echo "Checking code formatting..."
+if ! dart format --set-exit-if-changed .; then
+  echo "Formatting issues found. Run 'dart format .' to fix, then re-stage and commit."
+  exit 1
+fi
+
+# Analyze
+echo "Running flutter analyze..."
+if ! flutter analyze --no-fatal-infos; then
+  echo "Analysis issues found."
+  exit 1
+fi
+
+# Run tests
+echo "Running tests..."
+if ! flutter test; then
+  echo "Tests failed."
+  exit 1
+fi
+
+echo "All pre-push checks passed!"
