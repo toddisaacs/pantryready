@@ -1,0 +1,43 @@
+name: E2E (Manual)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  e2e_ios:
+    name: E2E on iOS Simulator
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8'
+          channel: 'stable'
+
+      - name: Cache pub and dart_tool
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: ${{ runner.os }}-flutter-3.32.8-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flutter-3.32.8-pub-
+
+      - name: Create Firebase options from template
+        run: cp lib/firebase_options_template.dart lib/firebase_options.dart
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Boot iOS simulator
+        run: |
+          xcrun simctl boot "iPhone 16" || true
+          open -a Simulator
+          sleep 15
+
+      - name: Run E2E tests
+        run: flutter test integration_test/ -d "iPhone 16"
