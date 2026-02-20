@@ -172,6 +172,8 @@ class InventoryItemDetailScreen extends StatelessWidget {
             if (item.storageLocation != null &&
                 item.storageLocation!.isNotEmpty)
               _buildDetailRow('Storage Location', item.storageLocation!),
+            if (item.brand != null && item.brand!.isNotEmpty)
+              _buildDetailRow('Brand', item.brand!),
             if (item.barcode != null && item.barcode!.isNotEmpty)
               _buildDetailRow('Barcode', item.barcode!),
             if (item.notes != null && item.notes!.isNotEmpty)

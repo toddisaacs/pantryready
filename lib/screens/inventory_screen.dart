@@ -758,6 +758,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             ),
                           ],
                         ),
+                        if (item.brand != null &&
+                            item.brand!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            item.brand!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppConstants.textSecondaryColor,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         // Middle row: quantity + days of supply
                         Row(

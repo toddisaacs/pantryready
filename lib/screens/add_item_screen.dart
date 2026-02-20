@@ -24,6 +24,7 @@ class AddItemScreen extends StatefulWidget {
 class _AddItemScreenState extends State<AddItemScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _brandController = TextEditingController();
   final _quantityController = TextEditingController();
   final _notesController = TextEditingController();
   final _barcodeController = TextEditingController();
@@ -55,6 +56,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (widget.suggestedItem != null) {
       final item = widget.suggestedItem!;
       _nameController.text = item.name;
+      _brandController.text = item.brand ?? '';
       _quantityController.text = item.totalQuantity.toString();
       _notesController.text = item.notes ?? '';
       _selectedUnit = item.unit;
@@ -90,7 +92,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 _selectedUnit;
           }
           if (result.brand != null && result.brand!.isNotEmpty) {
-            _notesController.text = 'Brand: ${result.brand}';
+            _brandController.text = result.brand!;
           }
         });
 
@@ -181,6 +183,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _brandController.dispose();
     _quantityController.dispose();
     _notesController.dispose();
     _barcodeController.dispose();
@@ -229,6 +232,16 @@ class _AddItemScreenState extends State<AddItemScreen> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 12),
+                      // Quick Add: Brand
+                      TextFormField(
+                        controller: _brandController,
+                        decoration: const InputDecoration(
+                          labelText: 'Brand (optional)',
+                          hintText: 'e.g. Del Monte, Libby',
+                        ),
+                        textCapitalization: TextCapitalization.words,
                       ),
                       const SizedBox(height: 12),
                       // Quick Add: Quantity + Unit (side by side)
@@ -513,6 +526,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
       final newItem = PantryItem(
         name: _nameController.text,
+        brand: _brandController.text.trim().isEmpty
+            ? null
+            : _brandController.text.trim(),
         unit: _selectedUnit,
         systemCategory: _selectedSystemCategory,
         subcategory: _selectedSubcategory,
@@ -553,6 +569,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (duplicate.name.isNotEmpty) {
       setState(() {
         _nameController.text = duplicate.name;
+        _brandController.text = duplicate.brand ?? '';
         _quantityController.text = duplicate.totalQuantity.toString();
         _notesController.text = duplicate.notes ?? '';
         _selectedUnit = duplicate.unit;

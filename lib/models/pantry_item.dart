@@ -130,6 +130,7 @@ class PantryItem {
   final SystemCategory systemCategory;
   final String? subcategory; // e.g., "Grains", "Canned Goods"
   final List<ItemBatch> batches;
+  final String? brand;
   final String? barcode;
   final String? notes;
   final String? storageLocation;
@@ -152,6 +153,7 @@ class PantryItem {
     required this.systemCategory,
     this.subcategory,
     List<ItemBatch>? batches,
+    this.brand,
     this.barcode,
     this.notes,
     this.storageLocation,
@@ -264,6 +266,7 @@ class PantryItem {
     SystemCategory? systemCategory,
     String? subcategory,
     List<ItemBatch>? batches,
+    String? brand,
     String? barcode,
     String? notes,
     String? storageLocation,
@@ -283,6 +286,7 @@ class PantryItem {
       systemCategory: systemCategory ?? this.systemCategory,
       subcategory: subcategory ?? this.subcategory,
       batches: batches ?? this.batches,
+      brand: brand ?? this.brand,
       barcode: barcode ?? this.barcode,
       notes: notes ?? this.notes,
       storageLocation: storageLocation ?? this.storageLocation,
@@ -340,6 +344,7 @@ class PantryItem {
       'systemCategory': systemCategory.name,
       'subcategory': subcategory,
       'batches': batches.map((batch) => batch.toJson()).toList(),
+      'brand': brand,
       'barcode': barcode,
       'notes': notes,
       'storageLocation': storageLocation,
@@ -369,6 +374,7 @@ class PantryItem {
               ?.map((batchJson) => ItemBatch.fromJson(batchJson))
               .toList() ??
           [],
+      brand: json['brand'] as String?,
       barcode: json['barcode'],
       notes: json['notes'],
       storageLocation: json['storageLocation'],
@@ -403,6 +409,7 @@ class PantryItem {
         other.subcategory == subcategory &&
         other.batches.length == batches.length &&
         other.batches.every((batch) => batches.contains(batch)) &&
+        other.brand == brand &&
         other.barcode == barcode &&
         other.notes == notes &&
         other.storageLocation == storageLocation &&
@@ -428,6 +435,7 @@ class PantryItem {
       systemCategory,
       subcategory,
       Object.hashAll(batches),
+      brand,
       barcode,
       notes,
       storageLocation,

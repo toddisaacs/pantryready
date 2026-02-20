@@ -15,6 +15,7 @@ class EditItemScreen extends StatefulWidget {
 class _EditItemScreenState extends State<EditItemScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
+  late TextEditingController _brandController;
   late TextEditingController _quantityController;
   late TextEditingController _notesController;
   late String _selectedUnit;
@@ -26,6 +27,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.item.name);
+    _brandController = TextEditingController(text: widget.item.brand ?? '');
     _quantityController = TextEditingController(
       text: widget.item.totalQuantity.toString(),
     );
@@ -39,6 +41,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _brandController.dispose();
     _quantityController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -72,6 +75,15 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _brandController,
+                decoration: const InputDecoration(
+                  labelText: 'Brand (optional)',
+                  hintText: 'e.g. Del Monte, Libby',
+                ),
+                textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 12),
               Row(
@@ -289,6 +301,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
       final updatedItem = widget.item.copyWith(
         name: _nameController.text,
+        brand: _brandController.text.trim().isEmpty
+            ? null
+            : _brandController.text.trim(),
         unit: _selectedUnit,
         systemCategory: _selectedSystemCategory,
         subcategory: _selectedSubcategory,

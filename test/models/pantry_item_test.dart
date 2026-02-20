@@ -150,6 +150,7 @@ void main() {
       final item = PantryItem(
         id: 'test-id',
         name: 'Rice',
+        brand: 'Lundberg',
         unit: 'lbs',
         systemCategory: SystemCategory.food,
         subcategory: 'Grains',
@@ -170,6 +171,7 @@ void main() {
 
       expect(restored.id, item.id);
       expect(restored.name, item.name);
+      expect(restored.brand, item.brand);
       expect(restored.unit, item.unit);
       expect(restored.systemCategory, item.systemCategory);
       expect(restored.subcategory, item.subcategory);
