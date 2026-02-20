@@ -84,7 +84,8 @@ class OpenFoodFactsService implements ProductApiService {
 
   String? _extractName(Map<String, dynamic> product) {
     // Try English/generic fields first, then any localized product_name_* field
-    final direct = product['product_name'] ??
+    final direct =
+        product['product_name'] ??
         product['product_name_en'] ??
         product['generic_name'] ??
         product['generic_name_en'] ??

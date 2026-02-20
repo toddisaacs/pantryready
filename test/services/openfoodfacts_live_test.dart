@@ -8,17 +8,19 @@ void main() {
     'OpenFoodFacts Live API Diagnostics',
     skip: 'Manual diagnostic — run explicitly with --verbose',
     () {
-      test('Libby green beans — verify category maps to Food, not Water',
-          () async {
-        final service = OpenFoodFactsService();
-        final result = await service.lookupProduct('00037100008414');
-        debugPrint('found: ${result.found}');
-        debugPrint('name: ${result.name}');
-        debugPrint('category: ${result.category}');
-        debugPrint('brand: ${result.brand}');
-        debugPrint('error: ${result.errorMessage}');
-        // If API available, category should not be water-related
-      });
+      test(
+        'Libby green beans — verify category maps to Food, not Water',
+        () async {
+          final service = OpenFoodFactsService();
+          final result = await service.lookupProduct('00037100008414');
+          debugPrint('found: ${result.found}');
+          debugPrint('name: ${result.name}');
+          debugPrint('category: ${result.category}');
+          debugPrint('brand: ${result.brand}');
+          debugPrint('error: ${result.errorMessage}');
+          // If API available, category should not be water-related
+        },
+      );
 
       test('Rate limit probe — 5 rapid calls, log any 429 responses', () async {
         final service = OpenFoodFactsService();

@@ -301,9 +301,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
       final updatedItem = widget.item.copyWith(
         name: _nameController.text,
-        brand: _brandController.text.trim().isEmpty
-            ? null
-            : _brandController.text.trim(),
+        brand:
+            _brandController.text.trim().isEmpty
+                ? null
+                : _brandController.text.trim(),
         unit: _selectedUnit,
         systemCategory: _selectedSystemCategory,
         subcategory: _selectedSubcategory,

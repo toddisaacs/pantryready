@@ -107,9 +107,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text(
-                  'Product found — enter the name manually',
-                ),
+                content: Text('Product found — enter the name manually'),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -526,9 +524,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
       final newItem = PantryItem(
         name: _nameController.text,
-        brand: _brandController.text.trim().isEmpty
-            ? null
-            : _brandController.text.trim(),
+        brand:
+            _brandController.text.trim().isEmpty
+                ? null
+                : _brandController.text.trim(),
         unit: _selectedUnit,
         systemCategory: _selectedSystemCategory,
         subcategory: _selectedSubcategory,
@@ -682,10 +681,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
   /// Mixed-case names are returned unchanged.
   String _normalizeName(String name) {
     if (name != name.toUpperCase()) return name;
-    return name.split(' ').map((word) {
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return name
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
 
   String _formatDate(DateTime date) {

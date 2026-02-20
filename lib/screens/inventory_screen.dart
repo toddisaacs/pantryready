@@ -230,14 +230,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ? Icons.format_list_bulleted
                       : Icons.layers,
                 ),
-                tooltip: _viewMode == _ViewMode.summary
-                    ? 'Detail view'
-                    : 'Summary view',
-                onPressed: () => setState(() {
-                  _viewMode = _viewMode == _ViewMode.summary
-                      ? _ViewMode.detail
-                      : _ViewMode.summary;
-                }),
+                tooltip:
+                    _viewMode == _ViewMode.summary
+                        ? 'Detail view'
+                        : 'Summary view',
+                onPressed:
+                    () => setState(() {
+                      _viewMode =
+                          _viewMode == _ViewMode.summary
+                              ? _ViewMode.detail
+                              : _ViewMode.summary;
+                    }),
               ),
               const SizedBox(width: 4),
               ElevatedButton.icon(
@@ -393,8 +396,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     for (final item in _filteredItems) {
       byCat.putIfAbsent(item.systemCategory, () => []).add(item);
     }
-    final sortedCategories = byCat.keys.toList()
-      ..sort((a, b) => a.displayName.compareTo(b.displayName));
+    final sortedCategories =
+        byCat.keys.toList()
+          ..sort((a, b) => a.displayName.compareTo(b.displayName));
 
     final widgets = <Widget>[];
     for (final cat in sortedCategories) {
@@ -404,8 +408,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
             .putIfAbsent(item.name.toLowerCase().trim(), () => [])
             .add(item);
       }
-      final sortedGroups = nameGroups.entries.toList()
-        ..sort((a, b) => a.key.compareTo(b.key));
+      final sortedGroups =
+          nameGroups.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
 
       widgets.add(_buildCategoryHeader(cat, sortedGroups.length));
       for (final entry in sortedGroups) {
@@ -434,11 +438,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final totalMax = items.fold(0.0, (s, i) => s + (i.maxStockLevel ?? 0.0));
     final stockPercent =
         totalMax > 0 ? (totalQty / totalMax).clamp(0.0, 1.0) : 1.0;
-    final barColor = stockPercent > 0.6
-        ? AppConstants.successColor
-        : stockPercent > 0.3
-        ? AppConstants.warningColor
-        : AppConstants.errorColor;
+    final barColor =
+        stockPercent > 0.6
+            ? AppConstants.successColor
+            : stockPercent > 0.3
+            ? AppConstants.warningColor
+            : AppConstants.errorColor;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -497,8 +502,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           child: LinearProgressIndicator(
                             value: stockPercent,
                             backgroundColor: AppConstants.surfaceColor,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(barColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(barColor),
                             minHeight: 4,
                           ),
                         ),
@@ -522,10 +526,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             if (hasLowStock && hasExpiring)
                               const SizedBox(width: 6),
                             if (hasExpiring)
-                              _buildBadge(
-                                'Expiring',
-                                AppConstants.errorColor,
-                              ),
+                              _buildBadge('Expiring', AppConstants.errorColor),
                           ],
                         ),
                       ],
@@ -758,8 +759,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             ),
                           ],
                         ),
-                        if (item.brand != null &&
-                            item.brand!.isNotEmpty) ...[
+                        if (item.brand != null && item.brand!.isNotEmpty) ...[
                           const SizedBox(height: 2),
                           Text(
                             item.brand!,
