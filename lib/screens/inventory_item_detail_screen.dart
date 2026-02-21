@@ -239,23 +239,9 @@ class InventoryItemDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${batch.quantity.toStringAsFixed(1)} ${item.unit}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              if (batch.costPerUnit != null)
-                Text(
-                  '\$${(batch.costPerUnit! * batch.quantity).toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: AppConstants.textSecondaryColor,
-                    fontSize: 12,
-                  ),
-                ),
-            ],
+          Text(
+            '${batch.quantity.toStringAsFixed(1)} ${item.unit}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(

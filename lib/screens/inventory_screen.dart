@@ -90,19 +90,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          if (_isAlerts)
-            _buildAlertsHeader()
-          else
-            _buildSearchAndFilterSection(),
-          Expanded(
-            child:
-                _filteredItems.isEmpty
-                    ? _buildEmptyState()
-                    : _buildInventoryList(),
-          ),
-        ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            if (_isAlerts)
+              _buildAlertsHeader()
+            else
+              _buildSearchAndFilterSection(),
+            Expanded(
+              child:
+                  _filteredItems.isEmpty
+                      ? _buildEmptyState()
+                      : _buildInventoryList(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -662,7 +664,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
           final newBatch = ItemBatch(
             quantity: 1.0,
             purchaseDate: DateTime.now(),
-            costPerUnit: null,
           );
           widget.onItemUpdated(item.addBatch(newBatch));
           if (mounted) {

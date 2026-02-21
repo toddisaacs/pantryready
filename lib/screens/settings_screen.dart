@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../config/environment_config.dart';
+import '../models/user_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool useFirestore;
   final Function(bool) onFirestoreToggle;
   final bool useOpenFoodFacts;
   final Function(bool) onApiToggle;
+  final UserPreferences userPreferences;
+  final Function(UserPreferences) onPreferencesChanged;
 
   const SettingsScreen({
     super.key,
@@ -14,6 +17,8 @@ class SettingsScreen extends StatefulWidget {
     required this.onFirestoreToggle,
     required this.useOpenFoodFacts,
     required this.onApiToggle,
+    required this.userPreferences,
+    required this.onPreferencesChanged,
   });
 
   @override
@@ -29,22 +34,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          _buildProfileSection(),
-          const SizedBox(height: 24),
-          _buildPreferencesSection(),
-          const SizedBox(height: 24),
-          _buildDataSection(),
-          const SizedBox(height: 20),
-          // Only show environment section in debug mode
-          if (EnvironmentConfig.allowEnvironmentSwitching()) ...[
-            _buildEnvironmentSection(),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            _buildProfileSection(),
+            const SizedBox(height: 24),
+            _buildPreparednessSection(),
+            const SizedBox(height: 24),
+            _buildPreferencesSection(),
+            const SizedBox(height: 24),
+            _buildDataSection(),
             const SizedBox(height: 20),
+            // Only show environment section in debug mode
+            if (EnvironmentConfig.allowEnvironmentSwitching()) ...[
+              _buildEnvironmentSection(),
+              const SizedBox(height: 20),
+            ],
+            _buildAboutSection(),
           ],
-          _buildAboutSection(),
-        ],
+        ),
       ),
     );
   }
@@ -108,6 +117,153 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPreparednessSection() {
+    final prefs = widget.userPreferences;
+    const targetPresets = [30, 60, 90, 180, 365];
+
+    return Card(
+      elevation: 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Text(
+              'Preparedness Goals',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppConstants.textColor,
+              ),
+            ),
+          ),
+          // Family size stepper
+          ListTile(
+            leading: const Icon(Icons.people),
+            title: const Text('Family Size'),
+            subtitle: const Text('Number of people to plan for'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline),
+                  onPressed:
+                      prefs.familySize > 1
+                          ? () => widget.onPreferencesChanged(
+                            prefs.copyWith(familySize: prefs.familySize - 1),
+                          )
+                          : null,
+                  color: AppConstants.primaryColor,
+                ),
+                SizedBox(
+                  width: 28,
+                  child: Text(
+                    '${prefs.familySize}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppConstants.textColor,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  onPressed:
+                      prefs.familySize < 10
+                          ? () => widget.onPreferencesChanged(
+                            prefs.copyWith(familySize: prefs.familySize + 1),
+                          )
+                          : null,
+                  color: AppConstants.primaryColor,
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          // Target days stepper
+          ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('Target Days of Supply'),
+            subtitle: const Text('Days of food & supplies to maintain'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline),
+                  onPressed:
+                      prefs.targetDaysOfSupply > 7
+                          ? () => widget.onPreferencesChanged(
+                            prefs.copyWith(
+                              targetDaysOfSupply: prefs.targetDaysOfSupply - 1,
+                            ),
+                          )
+                          : null,
+                  color: AppConstants.primaryColor,
+                ),
+                SizedBox(
+                  width: 40,
+                  child: Text(
+                    '${prefs.targetDaysOfSupply}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppConstants.textColor,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  onPressed:
+                      prefs.targetDaysOfSupply < 365
+                          ? () => widget.onPreferencesChanged(
+                            prefs.copyWith(
+                              targetDaysOfSupply: prefs.targetDaysOfSupply + 1,
+                            ),
+                          )
+                          : null,
+                  color: AppConstants.primaryColor,
+                ),
+              ],
+            ),
+          ),
+          // Preset chips
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Wrap(
+              spacing: 8,
+              children:
+                  targetPresets.map((days) {
+                    final isSelected = prefs.targetDaysOfSupply == days;
+                    return ChoiceChip(
+                      label: Text('$days days'),
+                      selected: isSelected,
+                      onSelected:
+                          (_) => widget.onPreferencesChanged(
+                            prefs.copyWith(targetDaysOfSupply: days),
+                          ),
+                      selectedColor: AppConstants.primaryColor.withValues(
+                        alpha: 0.2,
+                      ),
+                      labelStyle: TextStyle(
+                        color:
+                            isSelected
+                                ? AppConstants.primaryColor
+                                : AppConstants.textColor,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                    );
+                  }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }

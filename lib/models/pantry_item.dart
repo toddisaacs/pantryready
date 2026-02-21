@@ -6,7 +6,6 @@ class ItemBatch {
   final double quantity;
   final DateTime purchaseDate;
   final DateTime? expiryDate;
-  final double? costPerUnit;
   final String? notes;
 
   ItemBatch({
@@ -14,7 +13,6 @@ class ItemBatch {
     required this.quantity,
     required this.purchaseDate,
     this.expiryDate,
-    this.costPerUnit,
     this.notes,
   }) : id = id ?? const Uuid().v4();
 
@@ -23,7 +21,6 @@ class ItemBatch {
     double? quantity,
     DateTime? purchaseDate,
     DateTime? expiryDate,
-    double? costPerUnit,
     String? notes,
   }) {
     return ItemBatch(
@@ -31,7 +28,6 @@ class ItemBatch {
       quantity: quantity ?? this.quantity,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       expiryDate: expiryDate ?? this.expiryDate,
-      costPerUnit: costPerUnit ?? this.costPerUnit,
       notes: notes ?? this.notes,
     );
   }
@@ -42,7 +38,6 @@ class ItemBatch {
       'quantity': quantity,
       'purchaseDate': purchaseDate.toIso8601String(),
       'expiryDate': expiryDate?.toIso8601String(),
-      'costPerUnit': costPerUnit,
       'notes': notes,
     };
   }
@@ -56,7 +51,6 @@ class ItemBatch {
           json['expiryDate'] != null
               ? DateTime.parse(json['expiryDate'])
               : null,
-      costPerUnit: json['costPerUnit']?.toDouble(),
       notes: json['notes'],
     );
   }
@@ -69,20 +63,12 @@ class ItemBatch {
         other.quantity == quantity &&
         other.purchaseDate == purchaseDate &&
         other.expiryDate == expiryDate &&
-        other.costPerUnit == costPerUnit &&
         other.notes == notes;
   }
 
   @override
   int get hashCode {
-    return Object.hash(
-      id,
-      quantity,
-      purchaseDate,
-      expiryDate,
-      costPerUnit,
-      notes,
-    );
+    return Object.hash(id, quantity, purchaseDate, expiryDate, notes);
   }
 }
 

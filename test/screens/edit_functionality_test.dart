@@ -18,7 +18,6 @@ void main() {
         ItemBatch(
           quantity: 5.0,
           purchaseDate: DateTime.now(),
-          costPerUnit: 2.0,
           notes: 'Test batch',
         ),
       ],
@@ -234,13 +233,7 @@ void main() {
         name: 'Original Item',
         unit: 'pieces',
         systemCategory: SystemCategory.food,
-        batches: [
-          ItemBatch(
-            quantity: 1.0,
-            purchaseDate: DateTime.now(),
-            costPerUnit: 1.0,
-          ),
-        ],
+        batches: [ItemBatch(quantity: 1.0, purchaseDate: DateTime.now())],
       );
 
       // Simulate what happens in EditItemScreen._saveItem()
@@ -248,7 +241,6 @@ void main() {
       final newBatch = ItemBatch(
         quantity: 2.0,
         purchaseDate: DateTime.now(),
-        costPerUnit: 1.5,
         notes: 'Updated batch',
       );
       updatedBatches.add(newBatch);

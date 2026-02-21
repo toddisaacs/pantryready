@@ -7,13 +7,16 @@ import 'package:pantryready/screens/inventory_screen.dart';
 import 'package:pantryready/screens/barcode_scanner_screen.dart';
 import 'package:pantryready/screens/edit_item_screen.dart';
 import 'package:pantryready/screens/inventory_item_detail_screen.dart';
+import 'package:pantryready/screens/preparedness_screen.dart';
 import 'package:pantryready/screens/settings_screen.dart';
 import 'package:pantryready/screens/environment_settings_screen.dart';
 import 'package:pantryready/models/pantry_item.dart';
+import 'package:pantryready/models/user_preferences.dart';
 import 'package:pantryready/constants/app_constants.dart';
 import 'package:pantryready/widgets/item_quantity_dialog.dart';
 import 'package:pantryready/services/data_service.dart';
 import 'package:pantryready/services/data_service_factory.dart';
+import 'package:pantryready/services/user_preferences_service.dart';
 import 'package:pantryready/config/environment_config.dart';
 import 'package:pantryready/services/version_service.dart';
 import 'dart:async'; // Added for StreamSubscription
@@ -66,6 +69,7 @@ class PantryReadyApp extends StatefulWidget {
 class _PantryReadyAppState extends State<PantryReadyApp> {
   int _selectedIndex = 0;
   final List<PantryItem> _pantryItems = [];
+  UserPreferences _userPreferences = const UserPreferences();
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -73,12 +77,30 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
   // Data service - managed by factory
   late DataService _dataService;
   StreamSubscription<List<PantryItem>>? _dataSubscription;
+  final UserPreferencesService _prefsService = UserPreferencesService();
 
   @override
   void initState() {
     super.initState();
     _initializeDataService();
     _loadDataFromService();
+    _loadUserPreferences();
+  }
+
+  Future<void> _loadUserPreferences() async {
+    final prefs = await _prefsService.load();
+    if (mounted) {
+      setState(() {
+        _userPreferences = prefs;
+      });
+    }
+  }
+
+  void _onPreferencesChanged(UserPreferences prefs) {
+    setState(() {
+      _userPreferences = prefs;
+    });
+    _prefsService.save(prefs);
   }
 
   void _initializeDataService() {
@@ -194,9 +216,9 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
     _dataService.updatePantryItem(updatedItem);
   }
 
-  // Nav index mapping: 0=Pantry, 1=Scan(intercepted), 2=Alerts, 3=Settings
-  // IndexedStack children: 0=Pantry, 1=Alerts, 2=Settings
-  static const _navToStack = {0: 0, 2: 1, 3: 2};
+  // Nav index mapping: 0=Pantry, 1=Scan(intercepted), 2=Alerts, 3=Readiness, 4=Settings
+  // IndexedStack children: 0=Pantry, 1=Alerts, 2=Readiness, 3=Settings
+  static const _navToStack = {0: 0, 2: 1, 3: 2, 4: 3};
 
   void _onItemTapped(int index) {
     if (index == 1) {
@@ -469,6 +491,11 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
               onItemUpdated: _handleUpdatedItem,
               filterMode: InventoryFilterMode.alerts,
             ),
+            PreparednessScreen(
+              pantryItems: _pantryItems,
+              userPreferences: _userPreferences,
+              onGoToSettings: () => setState(() => _selectedIndex = 4),
+            ),
             SettingsScreen(
               key: ValueKey(
                 'settings_${EnvironmentConfig.environment}_${EnvironmentConfig.dataSource}',
@@ -477,6 +504,8 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
               onFirestoreToggle: (value) {},
               useOpenFoodFacts: true,
               onApiToggle: (value) {},
+              userPreferences: _userPreferences,
+              onPreferencesChanged: _onPreferencesChanged,
             ),
           ],
         ),
@@ -491,6 +520,10 @@ class _PantryReadyAppState extends State<PantryReadyApp> {
             BottomNavigationBarItem(
               icon: Icon(Icons.notifications_active),
               label: 'Alerts',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shield_outlined),
+              label: 'Readiness',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),

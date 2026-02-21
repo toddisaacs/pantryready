@@ -327,7 +327,6 @@ class _ItemQuantityDialogState extends State<ItemQuantityDialog> {
       final newBatch = ItemBatch(
         quantity: quantity,
         purchaseDate: DateTime.now(),
-        costPerUnit: null,
         notes: 'Added via quick dialog',
       );
       updatedItem = widget.item.addBatch(newBatch);

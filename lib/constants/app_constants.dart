@@ -145,7 +145,6 @@ class AppConstants {
           quantity: 24.0, // 24 liters
           purchaseDate: DateTime.now().subtract(const Duration(days: 30)),
           expiryDate: DateTime.now().add(const Duration(days: 730)), // 2 years
-          costPerUnit: 0.50, // $0.50 per liter
         ),
       ],
       dailyConsumptionRate: 3.0, // 3 liters per person per day
@@ -172,7 +171,6 @@ class AppConstants {
           quantity: 12.0,
           purchaseDate: DateTime.now().subtract(const Duration(days: 15)),
           expiryDate: DateTime.now().add(const Duration(days: 1095)), // 3 years
-          costPerUnit: 1.25,
         ),
       ],
       dailyConsumptionRate: 0.5, // 0.5 cans per person per day
@@ -199,7 +197,6 @@ class AppConstants {
           quantity: 2.0,
           purchaseDate: DateTime.now().subtract(const Duration(days: 60)),
           expiryDate: DateTime.now().add(const Duration(days: 1825)), // 5 years
-          costPerUnit: 25.00,
         ),
       ],
       dailyConsumptionRate: 0.01, // Very low consumption rate
@@ -227,7 +224,6 @@ class AppConstants {
           quantity: 24.0,
           purchaseDate: DateTime.now().subtract(const Duration(days: 7)),
           expiryDate: null, // No expiry
-          costPerUnit: 0.75,
         ),
       ],
       dailyConsumptionRate: 0.5, // 0.5 rolls per person per day
@@ -254,7 +250,6 @@ class AppConstants {
           quantity: 3.0,
           purchaseDate: DateTime.now().subtract(const Duration(days: 45)),
           expiryDate: null, // No expiry
-          costPerUnit: 15.00,
         ),
       ],
       dailyConsumptionRate: 0.0, // Not consumed daily
@@ -281,7 +276,6 @@ class AppConstants {
           quantity: 20.0,
           purchaseDate: DateTime.now().subtract(const Duration(days: 20)),
           expiryDate: DateTime.now().add(const Duration(days: 730)), // 2 years
-          costPerUnit: 0.80,
         ),
       ],
       dailyConsumptionRate: 0.25, // 0.25 lbs per person per day

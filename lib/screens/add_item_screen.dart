@@ -518,7 +518,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
         quantity: quantity,
         purchaseDate: DateTime.now(),
         expiryDate: _selectedExpiryDate,
-        costPerUnit: null,
         notes: _notesController.text.isNotEmpty ? _notesController.text : null,
       );
 

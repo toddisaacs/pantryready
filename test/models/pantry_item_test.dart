@@ -13,7 +13,6 @@ void main() {
       expect(batch.quantity, 10.0);
       expect(batch.purchaseDate, DateTime(2025, 1, 1));
       expect(batch.expiryDate, isNull);
-      expect(batch.costPerUnit, isNull);
       expect(batch.notes, isNull);
     });
 
@@ -23,14 +22,12 @@ void main() {
         quantity: 5.0,
         purchaseDate: DateTime(2025, 1, 1),
         expiryDate: DateTime(2026, 1, 1),
-        costPerUnit: 2.50,
         notes: 'Test notes',
       );
 
       expect(batch.id, 'custom-id');
       expect(batch.quantity, 5.0);
       expect(batch.expiryDate, DateTime(2026, 1, 1));
-      expect(batch.costPerUnit, 2.50);
       expect(batch.notes, 'Test notes');
     });
 
@@ -54,7 +51,6 @@ void main() {
         quantity: 10.0,
         purchaseDate: DateTime(2025, 1, 1),
         expiryDate: DateTime(2026, 1, 1),
-        costPerUnit: 2.50,
         notes: 'Test',
       );
 
@@ -65,7 +61,6 @@ void main() {
       expect(restored.quantity, batch.quantity);
       expect(restored.purchaseDate, batch.purchaseDate);
       expect(restored.expiryDate, batch.expiryDate);
-      expect(restored.costPerUnit, batch.costPerUnit);
       expect(restored.notes, batch.notes);
     });
 

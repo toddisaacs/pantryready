@@ -97,7 +97,6 @@ class MockProductApiService implements ProductApiService {
     final initialBatch = ItemBatch(
       quantity: 1.0,
       purchaseDate: DateTime.now(),
-      costPerUnit: null,
       notes: 'Added via barcode scan',
     );
 
